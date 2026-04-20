@@ -1,0 +1,10 @@
+services:
+  maple:
+    build: .
+    image: maple:latest
+    container_name: maple
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
