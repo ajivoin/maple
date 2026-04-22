@@ -5,15 +5,20 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import type { SlashCommand } from '../types.js';
+import loop from './loop.js';
+import nowplaying from './nowplaying.js';
 import pause from './pause.js';
 import play from './play.js';
+import queue from './queue.js';
+import remove from './remove.js';
 import rewind from './rewind.js';
 import save from './save.js';
 import search from './search.js';
+import shuffle from './shuffle.js';
 import skip from './skip.js';
 import stop from './stop.js';
 
-const LISTED = [play, search, pause, stop, skip, rewind, save];
+const LISTED = [play, search, pause, stop, skip, rewind, save, queue, nowplaying, loop, shuffle, remove];
 
 const command: SlashCommand = {
   data: new SlashCommandBuilder()
