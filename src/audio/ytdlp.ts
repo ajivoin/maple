@@ -14,6 +14,29 @@ type YtDlpJson = {
   _type?: string;
 };
 
+const RESOLVE_TIMEOUT_MS = 20_000;
+const MAX_CONCURRENT_RESOLVE = 4;
+
+let inflight = 0;
+const waitQueue: Array<() => void> = [];
+
+function acquire(): Promise<void> {
+  if (inflight < MAX_CONCURRENT_RESOLVE) {
+    inflight++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => waitQueue.push(resolve));
+}
+
+function release(): void {
+  const next = waitQueue.shift();
+  if (next) {
+    next();
+  } else {
+    inflight--;
+  }
+}
+
 export async function resolveUrl(
   url: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
@@ -32,30 +55,42 @@ async function _resolve(
   input: string,
   args: string[],
 ): Promise<{ url: string; title: string; duration?: number }> {
-  const { stdout, stderr, code } = await runYtDlp(args);
-  if (code !== 0) {
-    logger.warn(`yt-dlp resolve failed (code ${code}) for "${input}": ${stderr.trim() || 'no stderr'}`);
-    throw new YtDlpError(
-      `yt-dlp exited with code ${code}: ${stderr.trim() || 'no stderr'}`,
-    );
-  }
-
-  let parsed: YtDlpJson;
+  await acquire();
   try {
-    parsed = JSON.parse(stdout) as YtDlpJson;
-  } catch (err) {
-    throw new YtDlpError(`Failed to parse yt-dlp JSON output: ${(err as Error).message}`);
-  }
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new YtDlpError(`yt-dlp timed out after ${RESOLVE_TIMEOUT_MS / 1000}s`)),
+        RESOLVE_TIMEOUT_MS,
+      ),
+    );
+    const { stdout, stderr, code } = await Promise.race([runYtDlp(args), timeout]);
 
-  const entry = parsed._type === 'playlist' && parsed.entries?.length ? parsed.entries[0] : parsed;
-  const url = entry.webpage_url ?? entry.original_url ?? entry.url;
-  const title = entry.title;
-  if (!url || !title) {
-    logger.warn(`yt-dlp returned unusable JSON for "${input}":`, { url, title, _type: parsed._type });
-    throw new YtDlpError('yt-dlp did not return a usable track (missing url or title).');
+    if (code !== 0) {
+      logger.warn(`yt-dlp resolve failed (code ${code}) for "${input}": ${stderr.trim() || 'no stderr'}`);
+      throw new YtDlpError(
+        `yt-dlp exited with code ${code}: ${stderr.trim() || 'no stderr'}`,
+      );
+    }
+
+    let parsed: YtDlpJson;
+    try {
+      parsed = JSON.parse(stdout) as YtDlpJson;
+    } catch (err) {
+      throw new YtDlpError(`Failed to parse yt-dlp JSON output: ${(err as Error).message}`);
+    }
+
+    const entry = parsed._type === 'playlist' && parsed.entries?.length ? parsed.entries[0] : parsed;
+    const url = entry?.webpage_url ?? entry?.original_url ?? entry?.url;
+    const title = entry?.title;
+    if (!url || !title) {
+      logger.warn(`yt-dlp returned unusable JSON for "${input}":`, { url, title, _type: parsed._type });
+      throw new YtDlpError('yt-dlp did not return a usable track (missing url or title).');
+    }
+    logger.info(`Resolved "${input}" → "${title}" (${url})${entry?.duration ? ` [${entry.duration}s]` : ''}`);
+    return { url, title, duration: entry?.duration };
+  } finally {
+    release();
   }
-  logger.info(`Resolved "${input}" → "${title}" (${url})${entry.duration ? ` [${entry.duration}s]` : ''}`);
-  return { url, title, duration: entry.duration };
 }
 
 export function createAudioStream(url: string): Readable {

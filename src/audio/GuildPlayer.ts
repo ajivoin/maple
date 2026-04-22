@@ -11,7 +11,7 @@ import {
 } from '@discordjs/voice';
 import type { GuildTextBasedChannel, VoiceBasedChannel } from 'discord.js';
 import { logger } from '../logger.js';
-import type { Track } from '../types.js';
+import type { LoopMode, Track } from '../types.js';
 import { createAudioStream } from './ytdlp.js';
 
 const IDLE_DISCONNECT_MS = 60_000;
@@ -21,6 +21,7 @@ export class GuildPlayer {
   private connection: VoiceConnection;
   private readonly player: AudioPlayer;
   private queue: Track[] = [];
+  private loopMode: LoopMode = 'off';
   private textChannel: GuildTextBasedChannel | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
   private starting = false;
@@ -48,8 +49,20 @@ export class GuildPlayer {
     this.player.on(AudioPlayerStatus.Idle, () => {
       if (this.starting) return;
       const finished = this.queue[0];
+
+      if (this.loopMode === 'track') {
+        void this.playCurrent();
+        return;
+      }
+
       this.queue.shift();
-      if (finished) logger.debug(`[${this.guildId}] Finished track: "${finished.title}"`);
+      if (finished) {
+        logger.debug(`[${this.guildId}] Finished track: "${finished.title}"`);
+        if (this.loopMode === 'queue') {
+          this.queue.push(finished);
+        }
+      }
+
       if (this.queue.length === 0) {
         logger.info(`[${this.guildId}] Queue empty, scheduling idle disconnect.`);
         this.scheduleIdleDisconnect();
@@ -61,6 +74,13 @@ export class GuildPlayer {
 
     this.player.on('error', (err) => {
       logger.error(`[${this.guildId}] AudioPlayer error:`, err);
+      this.queue.shift();
+      if (this.queue.length > 0) {
+        logger.info(`[${this.guildId}] Skipping errored track, advancing queue.`);
+        void this.playCurrent();
+      } else {
+        this.scheduleIdleDisconnect();
+      }
     });
 
     this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
@@ -98,6 +118,25 @@ export class GuildPlayer {
     return this.queue.length;
   }
 
+  getQueue(): Track[] {
+    return [...this.queue];
+  }
+
+  getLoopMode(): LoopMode {
+    return this.loopMode;
+  }
+
+  playerStatus(): 'playing' | 'paused' | 'idle' {
+    if (this.player.state.status === AudioPlayerStatus.Playing) return 'playing';
+    if (this.player.state.status === AudioPlayerStatus.Paused) return 'paused';
+    return 'idle';
+  }
+
+  setLoopMode(mode: LoopMode): void {
+    this.loopMode = mode;
+    logger.info(`[${this.guildId}] Loop mode set to "${mode}".`);
+  }
+
   async enqueue(track: Track): Promise<{ position: number; started: boolean }> {
     this.clearIdleTimer();
     this.queue.push(track);
@@ -130,6 +169,28 @@ export class GuildPlayer {
     logger.info(`[${this.guildId}] Skipping "${this.queue[0]?.title ?? 'unknown'}".`);
     this.player.stop(true);
     return true;
+  }
+
+  shuffle(): boolean {
+    if (this.queue.length < 2) return false;
+    for (let i = this.queue.length - 1; i > 1; i--) {
+      const j = 1 + Math.floor(Math.random() * i);
+      [this.queue[i], this.queue[j]] = [this.queue[j]!, this.queue[i]!];
+    }
+    logger.info(`[${this.guildId}] Queue shuffled (${this.queue.length - 1} upcoming tracks).`);
+    return true;
+  }
+
+  remove(position: number): Track | null {
+    if (position < 1 || position > this.queue.length) return null;
+    if (position === 1) {
+      const current = this.queue[0]!;
+      this.player.stop(true);
+      return current;
+    }
+    const [removed] = this.queue.splice(position - 1, 1);
+    logger.info(`[${this.guildId}] Removed "${removed?.title}" from queue position ${position}.`);
+    return removed ?? null;
   }
 
   async rewind(): Promise<boolean> {
