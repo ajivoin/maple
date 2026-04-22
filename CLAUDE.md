@@ -102,6 +102,11 @@ npm run format   # Prettier
 - `NODE_ENV=production` → global registration (up to 1 hour propagation)
 - otherwise → guild-only registration to `DEV_GUILD_ID` (instant)
 
+## Contributor Guidelines
+
+- **No claude.ai links**: Do not include links to claude.ai in commit messages or pull request descriptions — this is a security/privacy requirement.
+- **Commit authorship**: Commits must be authored as the human contributor. Do not add `Co-Authored-By: Claude` trailers or any AI attribution to commits or PRs in this repo.
+
 ## Environment Variables
 
 | Variable | Required | Purpose |
