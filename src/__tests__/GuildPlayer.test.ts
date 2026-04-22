@@ -1,5 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
+import type { VoiceBasedChannel } from 'discord.js';
 
 // Must be before GuildPlayer import so the mock is in place when the module loads
 vi.mock('@discordjs/voice', () => ({
@@ -29,16 +31,16 @@ function makeTrack(title: string) {
   return { url: `https://example.com/${title}`, title, requestedBy: 'u1', duration: 180 };
 }
 
-function makeChannel() {
+function makeChannel(): VoiceBasedChannel {
   return {
     id: 'ch1',
     name: 'general',
     guild: { id: 'g1', voiceAdapterCreator: {} },
-  } as any;
+  } as unknown as VoiceBasedChannel;
 }
 
-let playerMock: any;
-let connectionMock: any;
+let playerMock: AudioPlayer;
+let connectionMock: VoiceConnection;
 let gp: InstanceType<typeof GuildPlayer>;
 
 beforeEach(() => {
@@ -48,15 +50,15 @@ beforeEach(() => {
     unpause: vi.fn(),
     stop: vi.fn(),
     state: { status: 'idle' },
-  });
+  }) as unknown as AudioPlayer;
   connectionMock = Object.assign(new EventEmitter(), {
     subscribe: vi.fn(),
     destroy: vi.fn(),
     state: { status: 'ready' },
-  });
+  }) as unknown as VoiceConnection;
 
-  vi.mocked(createAudioPlayer).mockReturnValue(playerMock as any);
-  vi.mocked(joinVoiceChannel).mockReturnValue(connectionMock as any);
+  vi.mocked(createAudioPlayer).mockReturnValue(playerMock);
+  vi.mocked(joinVoiceChannel).mockReturnValue(connectionMock);
 
   gp = new GuildPlayer(makeChannel());
 });
