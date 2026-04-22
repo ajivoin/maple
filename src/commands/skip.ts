@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { playerManager } from '../audio/PlayerManager.js';
+import { hasMuteMembers } from '../permissions.js';
 import type { SlashCommand } from '../types.js';
 
 const command: SlashCommand = {
@@ -10,16 +11,22 @@ const command: SlashCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
     const player = playerManager.get(interaction.guildId);
-    if (!player || !player.currentTrack()) {
+    const track = player?.currentTrack();
+    if (!player || !track) {
+      await interaction.reply({ content: 'Nothing to skip.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (!hasMuteMembers(interaction) && interaction.user.id !== track.requestedBy) {
       await interaction.reply({
-        content: 'Nothing to skip.',
+        content: 'Only the person who queued this track or a moderator can skip it.',
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-    const skipped = player.currentTrack();
+
     player.skip();
-    await interaction.reply(`Skipped **${skipped?.title ?? 'current track'}**.`);
+    await interaction.reply(`Skipped **${track.title}**.`);
   },
 };
 
