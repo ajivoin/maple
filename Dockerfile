@@ -1,9 +1,7 @@
-# syntax=docker/dockerfile:1.7
-
-FROM node:lts-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++ libtool autoconf automake
+RUN apk add --no-cache python3 make g++ libtool autoconf automake opus-dev
 
 COPY package.json package-lock.json* ./
 RUN npm install --include=dev
@@ -15,11 +13,12 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 
-FROM node:lts-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN apk add --no-cache ffmpeg yt-dlp python3 \
+RUN apk add --no-cache ffmpeg python3 py3-pip \
+    && pip3 install --break-system-packages --no-cache-dir yt-dlp \
     && addgroup -S maple && adduser -S maple -G maple
 
 COPY --from=builder --chown=maple:maple /app/node_modules ./node_modules
