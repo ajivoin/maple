@@ -14,25 +14,29 @@ type YtDlpJson = {
   _type?: string;
 };
 
-export async function resolveTrack(
+export async function resolveUrl(
+  url: string,
+): Promise<{ url: string; title: string; duration?: number }> {
+  logger.info(`Resolving URL: "${url}"`);
+  return _resolve(url, ['-J', '--no-warnings', '--no-playlist', '--', url]);
+}
+
+export async function resolveSearch(
   query: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
-  logger.info(`Resolving track for query: "${query}"`);
-  const args = [
-    '-J',
-    '--no-warnings',
-    '--no-playlist',
-    '--default-search',
-    'ytsearch1',
-    '--',
-    query,
-  ];
+  logger.info(`Searching YouTube for: "${query}"`);
+  return _resolve(query, ['-J', '--no-warnings', '--no-playlist', '--', `ytsearch1:${query}`]);
+}
 
+async function _resolve(
+  input: string,
+  args: string[],
+): Promise<{ url: string; title: string; duration?: number }> {
   const { stdout, stderr, code } = await runYtDlp(args);
   if (code !== 0) {
-    logger.warn(`yt-dlp resolve failed (code ${code}) for query "${query}": ${stderr.trim() || 'no stderr'}`);
+    logger.warn(`yt-dlp resolve failed (code ${code}) for "${input}": ${stderr.trim() || 'no stderr'}`);
     throw new YtDlpError(
-      `yt-dlp exited with code ${code} while resolving query: ${stderr.trim() || 'no stderr'}`,
+      `yt-dlp exited with code ${code}: ${stderr.trim() || 'no stderr'}`,
     );
   }
 
@@ -47,10 +51,10 @@ export async function resolveTrack(
   const url = entry.webpage_url ?? entry.original_url ?? entry.url;
   const title = entry.title;
   if (!url || !title) {
-    logger.warn(`yt-dlp returned unusable JSON for query "${query}":`, { url, title, _type: parsed._type });
+    logger.warn(`yt-dlp returned unusable JSON for "${input}":`, { url, title, _type: parsed._type });
     throw new YtDlpError('yt-dlp did not return a usable track (missing url or title).');
   }
-  logger.info(`Resolved "${query}" → "${title}" (${url})${entry.duration ? ` [${entry.duration}s]` : ''}`);
+  logger.info(`Resolved "${input}" → "${title}" (${url})${entry.duration ? ` [${entry.duration}s]` : ''}`);
   return { url, title, duration: entry.duration };
 }
 
