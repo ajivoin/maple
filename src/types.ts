@@ -11,6 +11,8 @@ export type Track = {
   requestedBy: string;
 };
 
+export type LoopMode = 'off' | 'track' | 'queue';
+
 export type SlashCommand = {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
