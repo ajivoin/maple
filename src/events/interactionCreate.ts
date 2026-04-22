@@ -6,6 +6,12 @@ export function registerInteractions(client: Client): void {
   client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
+    const tag = interaction.user.tag;
+    const guild = interaction.guild?.name ?? 'DM';
+    const guildId = interaction.guildId ?? 'DM';
+    logger.info(`/${interaction.commandName} invoked by ${tag} in "${guild}" (${guildId})`);
+    logger.debug(`/${interaction.commandName} options:`, interaction.options.data);
+
     const command = commandMap.get(interaction.commandName);
     if (!command) {
       logger.warn(`Unknown command: ${interaction.commandName}`);
