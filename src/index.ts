@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import { config } from './config.js';
 import { registerInteractions } from './events/interactionCreate.js';
 import { registerReady } from './events/ready.js';
+import { registerVoiceStateUpdate } from './events/voiceStateUpdate.js';
 import { logger } from './logger.js';
 
 const client = new Client({
@@ -10,6 +11,7 @@ const client = new Client({
 
 registerReady(client);
 registerInteractions(client);
+registerVoiceStateUpdate(client);
 
 process.on('unhandledRejection', (err) => logger.error('Unhandled rejection:', err));
 process.on('uncaughtException', (err) => logger.error('Uncaught exception:', err));
