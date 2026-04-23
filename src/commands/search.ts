@@ -14,10 +14,7 @@ const command: SlashCommand = {
     .setName('search')
     .setDescription('Search YouTube and play the top result.')
     .addStringOption((opt) =>
-      opt
-        .setName('query')
-        .setDescription("Search terms, e.g. 'lo-fi hip hop'")
-        .setRequired(true),
+      opt.setName('query').setDescription("Search terms, e.g. 'lo-fi hip hop'").setRequired(true),
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -30,8 +27,7 @@ const command: SlashCommand = {
     }
 
     const member = interaction.member;
-    const voiceChannel =
-      member instanceof GuildMember ? member.voice.channel : null;
+    const voiceChannel = member instanceof GuildMember ? member.voice.channel : null;
     if (!voiceChannel) {
       await interaction.reply({
         content: 'You need to be in a voice channel first.',
@@ -48,8 +44,7 @@ const command: SlashCommand = {
       const resolved = await resolveSearch(query);
       track = { ...resolved, requestedBy: interaction.user.id };
     } catch (err) {
-      const message =
-        err instanceof YtDlpError ? err.message : 'Failed to find a track.';
+      const message = err instanceof YtDlpError ? err.message : 'Failed to find a track.';
       logger.error('resolveSearch failed:', err);
       await interaction.editReply(`Could not find a track for that query. ${message}`);
       return;
