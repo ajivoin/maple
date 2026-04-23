@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AudioPlayerStatus } from '@discordjs/voice';
 import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
 import type { VoiceBasedChannel } from 'discord.js';
 
@@ -118,12 +119,12 @@ describe('setLoopMode / getLoopMode', () => {
 
 describe('playerStatus', () => {
   it('reflects mock player state', () => {
-    playerMock.state.status = 'playing';
-    expect(gp.playerStatus()).toBe('playing');
-    playerMock.state.status = 'paused';
-    expect(gp.playerStatus()).toBe('paused');
-    playerMock.state.status = 'idle';
-    expect(gp.playerStatus()).toBe('idle');
+    playerMock.state.status = AudioPlayerStatus.Playing;
+    expect(gp.playerStatus()).toBe(AudioPlayerStatus.Playing);
+    playerMock.state.status = AudioPlayerStatus.Paused;
+    expect(gp.playerStatus()).toBe(AudioPlayerStatus.Paused);
+    playerMock.state.status = AudioPlayerStatus.Idle;
+    expect(gp.playerStatus()).toBe(AudioPlayerStatus.Idle);
   });
 });
 
