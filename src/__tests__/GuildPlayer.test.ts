@@ -147,7 +147,10 @@ describe('shuffle', () => {
     const titles = ['A', 'B', 'C', 'D'];
     for (const t of titles) await gp.enqueue(makeTrack(t));
     expect(gp.shuffle()).toBe(true);
-    const result = gp.getQueue().map((t) => t.title).sort();
+    const result = gp
+      .getQueue()
+      .map((t) => t.title)
+      .sort();
     expect(result).toEqual(titles.slice().sort());
   });
 });
