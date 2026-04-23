@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import { config } from './config.js';
+import { deployCommands } from './deploy-commands.js';
 import { registerInteractions } from './events/interactionCreate.js';
 import { registerReady } from './events/ready.js';
 import { registerVoiceStateUpdate } from './events/voiceStateUpdate.js';
@@ -22,6 +23,12 @@ const shutdown = (signal: string) => {
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+try {
+  await deployCommands();
+} catch (err) {
+  logger.error('Command deployment failed, continuing with existing registration:', err);
+}
 
 client.login(config.DISCORD_TOKEN).catch((err) => {
   logger.error('Login failed:', err);
