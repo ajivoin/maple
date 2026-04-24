@@ -106,6 +106,7 @@ npm run format   # Prettier
 
 - **No claude.ai links**: Do not include links to claude.ai in commit messages or pull request descriptions — this is a security/privacy requirement.
 - **Commit authorship**: Commits must be authored as the human contributor. Do not add `Co-Authored-By: Claude` trailers or any AI attribution to commits or PRs in this repo.
+- **Lint and format before every push**: Run `npm run lint && npm run format` and fix any issues before committing or pushing. The CI pipeline enforces both.
 
 ## Environment Variables
 
@@ -116,3 +117,4 @@ npm run format   # Prettier
 | `DEV_GUILD_ID` | Dev only | Guild for instant command registration |
 | `NODE_ENV` | No | `development` (default) / `production` / `test` |
 | `DEBUG` | No | Set to any value to enable debug logs |
+| `YOUTUBE_COOKIES_FILE` | No | Absolute path to a Netscape-format cookies file; passed as `--cookies` to yt-dlp for age-restricted videos |
