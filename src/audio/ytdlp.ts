@@ -116,7 +116,17 @@ export function createAudioStream(url: string): Readable {
   logger.debug(`Spawning yt-dlp audio stream for: ${url}`);
   const child = spawn(
     'yt-dlp',
-    ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--no-warnings', ...cookiesArgs(), '--', url],
+    [
+      '-f',
+      'bestaudio/best',
+      '-o',
+      '-',
+      '--no-playlist',
+      '--no-warnings',
+      ...cookiesArgs(),
+      '--',
+      url,
+    ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
 
