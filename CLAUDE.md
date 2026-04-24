@@ -116,3 +116,4 @@ npm run format   # Prettier
 | `DEV_GUILD_ID` | Dev only | Guild for instant command registration |
 | `NODE_ENV` | No | `development` (default) / `production` / `test` |
 | `DEBUG` | No | Set to any value to enable debug logs |
+| `YOUTUBE_COOKIES_FILE` | No | Absolute path to a Netscape-format cookies file; passed as `--cookies` to yt-dlp for age-restricted videos |

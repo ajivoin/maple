@@ -6,4 +6,8 @@ dist/
 !.env.example
 .DS_Store
 coverage/
+*cookies.txt
 .serena/
+.claude/
+_bmad/
+_bmad-output/
