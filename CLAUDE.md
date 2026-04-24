@@ -106,6 +106,7 @@ npm run format   # Prettier
 
 - **No claude.ai links**: Do not include links to claude.ai in commit messages or pull request descriptions — this is a security/privacy requirement.
 - **Commit authorship**: Commits must be authored as the human contributor. Do not add `Co-Authored-By: Claude` trailers or any AI attribution to commits or PRs in this repo.
+- **Lint and format before every push**: Run `npm run lint && npm run format` and fix any issues before committing or pushing. The CI pipeline enforces both.
 
 ## Environment Variables
 

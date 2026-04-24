@@ -30,8 +30,7 @@ const command: SlashCommand = {
     }
 
     const member = interaction.member;
-    const voiceChannel =
-      member instanceof GuildMember ? member.voice.channel : null;
+    const voiceChannel = member instanceof GuildMember ? member.voice.channel : null;
     if (!voiceChannel) {
       await interaction.reply({
         content: 'You need to be in a voice channel first.',
@@ -58,8 +57,7 @@ const command: SlashCommand = {
       const resolved = await resolveUrl(input);
       track = { ...resolved, requestedBy: interaction.user.id };
     } catch (err) {
-      const message =
-        err instanceof YtDlpError ? err.message : 'Failed to resolve URL.';
+      const message = err instanceof YtDlpError ? err.message : 'Failed to resolve URL.';
       logger.error('resolveUrl failed:', err);
       await interaction.editReply(`Could not play that URL. ${message}`);
       return;

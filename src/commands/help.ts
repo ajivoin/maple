@@ -18,12 +18,23 @@ import shuffle from './shuffle.js';
 import skip from './skip.js';
 import stop from './stop.js';
 
-const LISTED = [play, search, pause, stop, skip, rewind, save, queue, nowplaying, loop, shuffle, remove];
+const LISTED = [
+  play,
+  search,
+  pause,
+  stop,
+  skip,
+  rewind,
+  save,
+  queue,
+  nowplaying,
+  loop,
+  shuffle,
+  remove,
+];
 
 const command: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName('help')
-    .setDescription('Show all available commands.'),
+  data: new SlashCommandBuilder().setName('help').setDescription('Show all available commands.'),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()

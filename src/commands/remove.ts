@@ -43,7 +43,10 @@ const command: SlashCommand = {
 
     const removed = player.remove(position);
     if (!removed) {
-      await interaction.reply({ content: 'Could not remove that track.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: 'Could not remove that track.',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 

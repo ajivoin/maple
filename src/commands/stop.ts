@@ -16,7 +16,7 @@ const command: SlashCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
-    if (!await requireMuteMembers(interaction)) return;
+    if (!(await requireMuteMembers(interaction))) return;
     const player = playerManager.get(interaction.guildId);
     if (!player) {
       await interaction.reply({

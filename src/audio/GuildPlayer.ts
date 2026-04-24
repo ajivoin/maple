@@ -142,7 +142,9 @@ export class GuildPlayer {
     this.queue.push(track);
     const position = this.queue.length;
     const isFirst = position === 1;
-    logger.info(`[${this.guildId}] Enqueued "${track.title}" at position ${position} (requested by ${track.requestedBy})`);
+    logger.info(
+      `[${this.guildId}] Enqueued "${track.title}" at position ${position} (requested by ${track.requestedBy})`,
+    );
     if (isFirst) {
       await this.playCurrent();
     }
@@ -216,7 +218,9 @@ export class GuildPlayer {
       try {
         await entersState(this.connection, VoiceConnectionStatus.Ready, 20_000);
       } catch {
-        logger.error(`[${this.guildId}] Voice connection did not become ready within 20s, aborting playback.`);
+        logger.error(
+          `[${this.guildId}] Voice connection did not become ready within 20s, aborting playback.`,
+        );
         return;
       }
     }

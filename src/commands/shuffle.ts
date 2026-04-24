@@ -19,7 +19,9 @@ const command: SlashCommand = {
     }
 
     player.shuffle();
-    await interaction.reply(`Queue shuffled — ${player.queueLength() - 1} upcoming tracks randomized.`);
+    await interaction.reply(
+      `Queue shuffled — ${player.queueLength() - 1} upcoming tracks randomized.`,
+    );
   },
 };
 

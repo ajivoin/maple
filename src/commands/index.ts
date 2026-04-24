@@ -14,11 +14,19 @@ import skip from './skip.js';
 import stop from './stop.js';
 
 export const commands: SlashCommand[] = [
-  play, search, pause, stop, skip, rewind, save,
-  queue, nowplaying, loop, shuffle, remove,
+  play,
+  search,
+  pause,
+  stop,
+  skip,
+  rewind,
+  save,
+  queue,
+  nowplaying,
+  loop,
+  shuffle,
+  remove,
   help,
 ];
 
-export const commandMap: Map<string, SlashCommand> = new Map(
-  commands.map((c) => [c.data.name, c]),
-);
+export const commandMap: Map<string, SlashCommand> = new Map(commands.map((c) => [c.data.name, c]));

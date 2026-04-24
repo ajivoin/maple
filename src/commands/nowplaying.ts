@@ -19,7 +19,10 @@ const command: SlashCommand = {
     const track = player?.currentTrack();
 
     if (!player || !track) {
-      await interaction.reply({ content: 'Nothing is playing right now.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: 'Nothing is playing right now.',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 

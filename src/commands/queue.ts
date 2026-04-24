@@ -11,9 +11,7 @@ import { formatDuration } from '../util.js';
 const DISPLAY_LIMIT = 10;
 
 const command: SlashCommand = {
-  data: new SlashCommandBuilder()
-    .setName('queue')
-    .setDescription('Show the current queue.'),
+  data: new SlashCommandBuilder().setName('queue').setDescription('Show the current queue.'),
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
@@ -28,9 +26,7 @@ const command: SlashCommand = {
     const [current, ...upcoming] = tracks;
     const dur = (d?: number) => (d ? ` [${formatDuration(d)}]` : '');
 
-    const embed = new EmbedBuilder()
-      .setTitle('🍁 Queue')
-      .setColor(0xe6892f);
+    const embed = new EmbedBuilder().setTitle('🍁 Queue').setColor(0xe6892f);
 
     embed.addFields({
       name: 'Now playing',
@@ -39,9 +35,7 @@ const command: SlashCommand = {
 
     if (upcoming.length > 0) {
       const shown = upcoming.slice(0, DISPLAY_LIMIT);
-      const lines = shown.map(
-        (t, i) => `${i + 2}. **${t.title}**${dur(t.duration)}`,
-      );
+      const lines = shown.map((t, i) => `${i + 2}. **${t.title}**${dur(t.duration)}`);
       const overflow = upcoming.length - shown.length;
       if (overflow > 0) lines.push(`*…and ${overflow} more*`);
       embed.addFields({ name: 'Up next', value: lines.join('\n') });

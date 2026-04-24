@@ -19,10 +19,7 @@ async function main() {
   }
 
   logger.info(`Registering ${body.length} guild commands in ${config.DEV_GUILD_ID}...`);
-  await rest.put(
-    Routes.applicationGuildCommands(config.CLIENT_ID, config.DEV_GUILD_ID),
-    { body },
-  );
+  await rest.put(Routes.applicationGuildCommands(config.CLIENT_ID, config.DEV_GUILD_ID), { body });
   logger.info('Guild commands registered.');
 }
 
