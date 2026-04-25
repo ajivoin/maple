@@ -7,6 +7,10 @@ function cookiesArgs(): string[] {
   return config.YOUTUBE_COOKIES_FILE ? ['--cookies', config.YOUTUBE_COOKIES_FILE] : [];
 }
 
+function ytPlayerArgs(): string[] {
+  return ['--extractor-args', 'youtube:player_client=ios,tv_embedded'];
+}
+
 export class YtDlpError extends Error {}
 
 type YtDlpJson = {
@@ -46,7 +50,15 @@ export async function resolveUrl(
   url: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
   logger.info(`Resolving URL: "${url}"`);
-  return _resolve(url, ['-J', '--no-warnings', '--no-playlist', ...cookiesArgs(), '--', url]);
+  return _resolve(url, [
+    '-J',
+    '--no-warnings',
+    '--no-playlist',
+    ...ytPlayerArgs(),
+    ...cookiesArgs(),
+    '--',
+    url,
+  ]);
 }
 
 export async function resolveSearch(
@@ -57,6 +69,7 @@ export async function resolveSearch(
     '-J',
     '--no-warnings',
     '--no-playlist',
+    ...ytPlayerArgs(),
     ...cookiesArgs(),
     '--',
     `ytsearch1:${query}`,
@@ -123,6 +136,7 @@ export function createAudioStream(url: string): Readable {
       '-',
       '--no-playlist',
       '--no-warnings',
+      ...ytPlayerArgs(),
       ...cookiesArgs(),
       '--',
       url,
