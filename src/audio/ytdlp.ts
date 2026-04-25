@@ -46,16 +46,7 @@ export async function resolveUrl(
   url: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
   logger.info(`Resolving URL: "${url}"`);
-  return _resolve(url, [
-    '-J',
-    '--no-warnings',
-    '--no-playlist',
-    '-f',
-    'bestaudio/best',
-    ...cookiesArgs(),
-    '--',
-    url,
-  ]);
+  return _resolve(url, ['-J', '--no-warnings', '--no-playlist', ...cookiesArgs(), '--', url]);
 }
 
 export async function resolveSearch(
@@ -66,8 +57,6 @@ export async function resolveSearch(
     '-J',
     '--no-warnings',
     '--no-playlist',
-    '-f',
-    'bestaudio/best',
     ...cookiesArgs(),
     '--',
     `ytsearch1:${query}`,
