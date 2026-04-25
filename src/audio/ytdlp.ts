@@ -7,6 +7,10 @@ function cookiesArgs(): string[] {
   return config.YOUTUBE_COOKIES_FILE ? ['--cookies', config.YOUTUBE_COOKIES_FILE] : [];
 }
 
+function ytPlayerArgs(): string[] {
+  return ['--extractor-args', 'youtube:player_client=ios,tv_embedded'];
+}
+
 export class YtDlpError extends Error {}
 
 type YtDlpJson = {
@@ -52,6 +56,7 @@ export async function resolveUrl(
     '--no-playlist',
     '-f',
     'bestaudio/best',
+    ...ytPlayerArgs(),
     ...cookiesArgs(),
     '--',
     url,
@@ -68,6 +73,7 @@ export async function resolveSearch(
     '--no-playlist',
     '-f',
     'bestaudio/best',
+    ...ytPlayerArgs(),
     ...cookiesArgs(),
     '--',
     `ytsearch1:${query}`,
@@ -134,6 +140,7 @@ export function createAudioStream(url: string): Readable {
       '-',
       '--no-playlist',
       '--no-warnings',
+      ...ytPlayerArgs(),
       ...cookiesArgs(),
       '--',
       url,
