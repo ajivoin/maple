@@ -1,11 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { Readable } from 'node:stream';
-import { config } from '../config.js';
 import { logger } from '../logger.js';
-
-function cookiesArgs(): string[] {
-  return config.YOUTUBE_COOKIES_FILE ? ['--cookies', config.YOUTUBE_COOKIES_FILE] : [];
-}
 
 export class YtDlpError extends Error {}
 
@@ -46,21 +41,14 @@ export async function resolveUrl(
   url: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
   logger.info(`Resolving URL: "${url}"`);
-  return _resolve(url, ['-J', '--no-warnings', '--no-playlist', ...cookiesArgs(), '--', url]);
+  return _resolve(url, ['-J', '--no-warnings', '--no-playlist', '--', url]);
 }
 
 export async function resolveSearch(
   query: string,
 ): Promise<{ url: string; title: string; duration?: number }> {
   logger.info(`Searching YouTube for: "${query}"`);
-  return _resolve(query, [
-    '-J',
-    '--no-warnings',
-    '--no-playlist',
-    ...cookiesArgs(),
-    '--',
-    `ytsearch1:${query}`,
-  ]);
+  return _resolve(query, ['-J', '--no-warnings', '--no-playlist', '--', `ytsearch1:${query}`]);
 }
 
 async function _resolve(
@@ -116,17 +104,7 @@ export function createAudioStream(url: string): Readable {
   logger.debug(`Spawning yt-dlp audio stream for: ${url}`);
   const child = spawn(
     'yt-dlp',
-    [
-      '-f',
-      'bestaudio/best',
-      '-o',
-      '-',
-      '--no-playlist',
-      '--no-warnings',
-      ...cookiesArgs(),
-      '--',
-      url,
-    ],
+    ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--no-warnings', '--', url],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
 

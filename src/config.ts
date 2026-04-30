@@ -6,7 +6,6 @@ const schema = z.object({
   CLIENT_ID: z.string().min(1, 'CLIENT_ID is required'),
   DEV_GUILD_ID: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  YOUTUBE_COOKIES_FILE: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
