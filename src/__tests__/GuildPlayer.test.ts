@@ -21,7 +21,7 @@ vi.mock('@discordjs/voice', () => ({
 }));
 
 vi.mock('../modules/audio/ytdlp.js', () => ({
-  createAudioStream: vi.fn(() => ({})),
+  createAudioStream: vi.fn(() => ({ stream: {}, kill: vi.fn() })),
 }));
 
 // Deferred import so the vi.mock above is registered first
