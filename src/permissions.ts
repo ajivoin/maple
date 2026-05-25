@@ -14,3 +14,14 @@ export async function requireMuteMembers(
   });
   return false;
 }
+
+export async function requireManageChannels(
+  interaction: ChatInputCommandInteraction,
+): Promise<boolean> {
+  if (interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) return true;
+  await interaction.reply({
+    content: 'You need the **Manage Channels** permission to use this command.',
+    flags: MessageFlags.Ephemeral,
+  });
+  return false;
+}

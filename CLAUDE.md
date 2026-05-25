@@ -1,12 +1,13 @@
 # Maple — Claude Context
 
-Discord audio bot built with discord.js v14 + @discordjs/voice, streaming audio via yt-dlp.
+General-purpose Discord bot built with discord.js v14 + @discordjs/voice, streaming audio via yt-dlp, with RSS feed subscriptions.
 
 ## Stack
 
 - **Language**: TypeScript (strict, ESM, Node ≥ 24)
 - **Bot framework**: discord.js v14
 - **Audio**: @discordjs/voice + yt-dlp subprocess
+- **RSS**: rss-parser + better-sqlite3
 - **Config validation**: Zod
 - **Dev runner**: `tsx watch`
 
@@ -14,43 +15,68 @@ Discord audio bot built with discord.js v14 + @discordjs/voice, streaming audio 
 
 ```
 src/
-  index.ts              # Client setup, registers event handlers
-  config.ts             # Zod-validated env (DISCORD_TOKEN, CLIENT_ID, DEV_GUILD_ID)
+  index.ts              # Bootstrap: initDb → loadModules → Client → login
+  config.ts             # Zod-validated env
   logger.ts             # Singleton logger with ISO timestamps; debug gated on DEBUG env var
-  types.ts              # SlashCommand type, Track type
-  commands/
-    index.ts            # Master list: `commands[]` and `commandMap`
-    help.ts             # /help embed — must stay in sync with command list (see below)
-    play.ts             # /play  — direct URL only
-    search.ts           # /search — YouTube natural-language search
-    pause.ts            # /pause
-    stop.ts             # /stop
-    skip.ts             # /skip
-    rewind.ts           # /rewind
-    save.ts             # /save
-  events/
-    interactionCreate.ts  # Routes ChatInputCommands via commandMap
-    ready.ts
-  audio/
-    PlayerManager.ts    # Singleton map of guildId → GuildPlayer
-    GuildPlayer.ts      # Per-guild voice connection, queue, auto-disconnect after 60s idle
-    ytdlp.ts            # resolveUrl(), resolveSearch(), createAudioStream()
+  types.ts              # SlashCommand, Track, LoopMode, Module, EventRegistrar types
+  permissions.ts        # hasMuteMembers(), requireMuteMembers()
+  util.ts               # formatDuration()
+  core/
+    loader.ts           # loadModules(): aggregates commands/events/intents from all modules
+    registry.ts         # registerCommand(), getCommandMap(), getAllCommands()
+    interactionCreate.ts # Generic interaction router; handles autocomplete
+    ready.ts            # registerReady(client, onReady)
+  db/
+    schema.ts           # SQL DDL + initializeSchema()
+    index.ts            # initDb() / getDb() singleton
+  modules/
+    audio/
+      index.ts          # AudioModule definition
+      commands/         # play, search, pause, stop, skip, rewind, save, queue, nowplaying, loop, shuffle, remove
+      GuildPlayer.ts    # Per-guild voice connection, queue, auto-disconnect after 60s idle
+      PlayerManager.ts  # Singleton map of guildId → GuildPlayer
+      ytdlp.ts          # resolveUrl(), resolveSearch(), createAudioStream()
+      events/
+        voiceStateUpdate.ts
+    rss/
+      index.ts          # RssModule definition; starts RssPoller in onReady
+      commands/         # rss_add, rss_list, rss_remove, rss_pause, rss_resume
+      db.ts             # RSS CRUD operations (better-sqlite3, synchronous)
+      service.ts        # RssPoller: polls feeds, posts new items as embeds
+    general/
+      index.ts          # GeneralModule definition
+      commands/
+        help.ts         # Auto-built from getAllCommands() — no manual sync needed
 scripts/
   deploy-commands.ts    # Registers commands via Discord REST API
 ```
 
-## Adding a New Command
+## Adding a New Module
 
-1. Create `src/commands/<name>.ts` — export a `SlashCommand` default.
-2. Import it in `src/commands/index.ts` and add it to the `commands` array.
-3. **Update `src/commands/help.ts`**: import the new command and add it to the `LISTED` array so it appears in the `/help` embed.
+1. Create `src/modules/<name>/index.ts` exporting a `Module` object.
+2. Import it in `src/index.ts` and add it to the `loadModules([...])` array.
+3. Add it to `scripts/deploy-commands.ts` in the `loadModules([...])` call.
 4. Run `npm run deploy` to register the updated command list with Discord.
+
+The `/help` command auto-discovers all registered commands — no manual updates needed.
+
+### Module interface
+
+```typescript
+interface Module {
+  name: string;
+  commands: SlashCommand[];
+  intents?: GatewayIntentBits[];
+  events?: EventRegistrar[];
+  onReady?: (client: Client) => void | Promise<void>;
+}
+```
 
 ### Command template
 
 ```typescript
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js';
-import type { SlashCommand } from '../types.js';
+import type { SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
   data: new SlashCommandBuilder()
@@ -62,6 +88,11 @@ const command: SlashCommand = {
     // ...
     await interaction.reply('Response');
   },
+
+  // Optional: for commands with setAutocomplete(true) options
+  async autocomplete(interaction) {
+    await interaction.respond([{ name: 'Label', value: 'value' }]);
+  },
 };
 
 export default command;
@@ -69,7 +100,7 @@ export default command;
 
 ## Audio Layer
 
-**`ytdlp.ts`** exports three things:
+**`ytdlp.ts`** (in `src/modules/audio/`):
 
 | Export | Purpose |
 |--------|---------|
@@ -80,10 +111,17 @@ export default command;
 
 **`GuildPlayer`** is retrieved via `playerManager.getOrCreate(voiceChannel)`. Key methods: `enqueue()`, `skip()`, `pauseToggle()`, `rewind()`, `stop()`, `currentTrack()`.
 
+## RSS Layer
+
+- `src/modules/rss/db.ts` — CRUD for `rss_subscriptions` table (better-sqlite3, synchronous)
+- `src/modules/rss/service.ts` — `RssPoller` class; started in `RssModule.onReady`; polls every `RSS_POLL_INTERVAL_MS` ms; posts new items as Discord embeds; auto-pauses feeds that fail 3 times
+- RSS commands gate write operations behind `PermissionFlagsBits.ManageChannels`
+- `/rss_remove`, `/rss_pause`, `/rss_resume` use Discord autocomplete on the `url` option
+
 ## Response Conventions
 
 - **Ephemeral** (`MessageFlags.Ephemeral`): errors, confirmations only the invoking user should see
-- **Deferred reply** (`interaction.deferReply()` → `interaction.editReply()`): any command that calls yt-dlp or async audio setup (takes >3 s)
+- **Deferred reply** (`interaction.deferReply()` → `interaction.editReply()`): any command that calls yt-dlp or async network ops (takes >3 s)
 - **Standard reply**: short, synchronous responses visible to the channel
 - Guild-only guard: `if (!interaction.inGuild()) return;` at the top of every command
 
@@ -118,3 +156,5 @@ npm run format   # Prettier
 | `NODE_ENV` | No | `development` (default) / `production` / `test` |
 | `DEBUG` | No | Set to any value to enable debug logs |
 | `YOUTUBE_COOKIES_FILE` | No | Absolute path to a Netscape-format cookies file; passed as `--cookies` to yt-dlp for age-restricted videos |
+| `DATABASE_PATH` | No | Path to SQLite DB file (default: `./data/maple.db`) |
+| `RSS_POLL_INTERVAL_MS` | No | How often to poll RSS feeds in ms (default: `600000` = 10 min) |

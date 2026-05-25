@@ -20,12 +20,12 @@ vi.mock('@discordjs/voice', () => ({
   entersState: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../audio/ytdlp.js', () => ({
-  createAudioStream: vi.fn(() => ({})),
+vi.mock('../modules/audio/ytdlp.js', () => ({
+  createAudioStream: vi.fn(() => ({ stream: {}, kill: vi.fn() })),
 }));
 
 // Deferred import so the vi.mock above is registered first
-const { GuildPlayer } = await import('../audio/GuildPlayer.js');
+const { GuildPlayer } = await import('../modules/audio/GuildPlayer.js');
 const { createAudioPlayer, joinVoiceChannel } = await import('@discordjs/voice');
 
 function makeTrack(title: string) {

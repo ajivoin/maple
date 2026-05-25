@@ -4,9 +4,9 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { playerManager } from '../audio/PlayerManager.js';
-import { requireMuteMembers } from '../permissions.js';
-import type { LoopMode, SlashCommand } from '../types.js';
+import { playerManager } from '../PlayerManager.js';
+import { requireMuteMembers } from '../../../permissions.js';
+import type { LoopMode, SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
   data: new SlashCommandBuilder()

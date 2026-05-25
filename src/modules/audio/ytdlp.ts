@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import type { Readable } from 'node:stream';
-import { logger } from '../logger.js';
+import { config } from '../../config.js';
+import { logger } from '../../logger.js';
 
 export class YtDlpError extends Error {}
 
@@ -56,15 +58,26 @@ async function _resolve(
   args: string[],
 ): Promise<{ url: string; title: string; duration?: number }> {
   await acquire();
-  try {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new YtDlpError(`yt-dlp timed out after ${RESOLVE_TIMEOUT_MS / 1000}s`)),
-        RESOLVE_TIMEOUT_MS,
-      ),
-    );
-    const { stdout, stderr, code } = await Promise.race([runYtDlp(args), timeout]);
+  const { promise, child } = runYtDlp(args);
+  let timeoutId: NodeJS.Timeout | undefined;
 
+  try {
+    let result: { stdout: string; stderr: string; code: number | null };
+    try {
+      result = await Promise.race([
+        promise,
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            if (!child.killed) child.kill('SIGKILL');
+            reject(new YtDlpError(`yt-dlp timed out after ${RESOLVE_TIMEOUT_MS / 1000}s`));
+          }, RESOLVE_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const { stdout, stderr, code } = result;
     if (code !== 0) {
       logger.warn(
         `yt-dlp resolve failed (code ${code}) for "${input}": ${stderr.trim() || 'no stderr'}`,
@@ -100,13 +113,22 @@ async function _resolve(
   }
 }
 
-export function createAudioStream(url: string): Readable {
+export type AudioStream = {
+  stream: Readable;
+  kill: () => void;
+};
+
+export function createAudioStream(url: string): AudioStream {
   logger.debug(`Spawning yt-dlp audio stream for: ${url}`);
   const child = spawn(
-    'yt-dlp',
+    config.YTDLP_PATH,
     ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--no-warnings', '--', url],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
+
+  if (!child.stdout) {
+    throw new YtDlpError('yt-dlp spawn failed: stdout is unavailable');
+  }
 
   child.stderr.setEncoding('utf8');
   child.stderr.on('data', (data: string) => {
@@ -119,6 +141,8 @@ export function createAudioStream(url: string): Readable {
       logger.warn(`yt-dlp stream process exited with code ${code} for ${url}`);
     else logger.debug(`yt-dlp stream process closed (code ${code}) for ${url}`);
   });
+
+  child.stdout.on('error', (err) => logger.error(`yt-dlp stdout error for ${url}:`, err));
 
   let firstChunk = true;
   child.stdout.on('data', () => {
@@ -133,26 +157,35 @@ export function createAudioStream(url: string): Readable {
     if (!child.killed) child.kill('SIGKILL');
   });
 
-  return child.stdout;
+  const kill = () => {
+    if (!child.killed) child.kill('SIGKILL');
+  };
+
+  return { stream: child.stdout, kill };
 }
 
-function runYtDlp(
-  args: string[],
-): Promise<{ stdout: string; stderr: string; code: number | null }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    const stdoutChunks: Buffer[] = [];
-    const stderrChunks: Buffer[] = [];
+function runYtDlp(args: string[]): {
+  promise: Promise<{ stdout: string; stderr: string; code: number | null }>;
+  child: ChildProcess;
+} {
+  const child = spawn(config.YTDLP_PATH, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const stdoutChunks: Buffer[] = [];
+  const stderrChunks: Buffer[] = [];
 
-    child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
-    child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
-    child.on('error', reject);
-    child.on('close', (code) => {
-      resolve({
-        stdout: Buffer.concat(stdoutChunks).toString('utf8'),
-        stderr: Buffer.concat(stderrChunks).toString('utf8'),
-        code,
+  const promise = new Promise<{ stdout: string; stderr: string; code: number | null }>(
+    (resolve, reject) => {
+      child.stdout!.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+      child.stderr!.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+      child.on('error', reject);
+      child.on('close', (code) => {
+        resolve({
+          stdout: Buffer.concat(stdoutChunks).toString('utf8'),
+          stderr: Buffer.concat(stderrChunks).toString('utf8'),
+          code,
+        });
       });
-    });
-  });
+    },
+  );
+
+  return { promise, child };
 }

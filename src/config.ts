@@ -6,6 +6,10 @@ const schema = z.object({
   CLIENT_ID: z.string().min(1, 'CLIENT_ID is required'),
   DEV_GUILD_ID: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  YOUTUBE_COOKIES_FILE: z.string().optional(),
+  YTDLP_PATH: z.string().default('yt-dlp'),
+  DATABASE_PATH: z.string().default('./data/maple.db'),
+  RSS_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(600_000),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -10,8 +10,8 @@ import {
   joinVoiceChannel,
 } from '@discordjs/voice';
 import type { GuildTextBasedChannel, VoiceBasedChannel } from 'discord.js';
-import { logger } from '../logger.js';
-import type { LoopMode, Track } from '../types.js';
+import { logger } from '../../logger.js';
+import type { LoopMode, Track } from '../../types.js';
 import { createAudioStream } from './ytdlp.js';
 
 const IDLE_DISCONNECT_MS = 60_000;
@@ -25,6 +25,7 @@ export class GuildPlayer {
   private textChannel: GuildTextBasedChannel | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
   private starting = false;
+  private killActiveStream: (() => void) | null = null;
   private onDestroy?: () => void;
 
   constructor(channel: VoiceBasedChannel, onDestroy?: () => void) {
@@ -51,7 +52,9 @@ export class GuildPlayer {
       const finished = this.queue[0];
 
       if (this.loopMode === 'track') {
-        void this.playCurrent();
+        this.playCurrent().catch((err) =>
+          logger.error(`[${this.guildId}] playCurrent (loop=track) failed:`, err),
+        );
         return;
       }
 
@@ -68,7 +71,10 @@ export class GuildPlayer {
         this.scheduleIdleDisconnect();
       } else {
         logger.info(`[${this.guildId}] Advancing queue (${this.queue.length} remaining).`);
-        void this.playCurrent();
+        this.playCurrent().catch((err) => {
+          logger.error(`[${this.guildId}] playCurrent (queue advance) failed:`, err);
+          this.scheduleIdleDisconnect();
+        });
       }
     });
 
@@ -77,7 +83,10 @@ export class GuildPlayer {
       this.queue.shift();
       if (this.queue.length > 0) {
         logger.info(`[${this.guildId}] Skipping errored track, advancing queue.`);
-        void this.playCurrent();
+        this.playCurrent().catch((advErr) => {
+          logger.error(`[${this.guildId}] playCurrent (after error) failed:`, advErr);
+          this.scheduleIdleDisconnect();
+        });
       } else {
         this.scheduleIdleDisconnect();
       }
@@ -228,7 +237,8 @@ export class GuildPlayer {
     logger.info(`[${this.guildId}] Starting playback: "${track.title}" (${track.url})`);
     this.starting = true;
     try {
-      const stream = createAudioStream(track.url);
+      const { stream, kill } = createAudioStream(track.url);
+      this.killActiveStream = kill;
       const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
       this.player.play(resource);
     } catch (err) {
@@ -259,6 +269,8 @@ export class GuildPlayer {
   private destroy(): void {
     logger.info(`[${this.guildId}] Destroying GuildPlayer.`);
     this.clearIdleTimer();
+    this.killActiveStream?.();
+    this.killActiveStream = null;
     try {
       this.connection.destroy();
     } catch {

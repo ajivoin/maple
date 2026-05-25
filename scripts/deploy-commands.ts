@@ -1,11 +1,17 @@
 import { REST, Routes } from 'discord.js';
-import { commands } from '../src/commands/index.js';
+import { loadModules } from '../src/core/loader.js';
+import { getAllCommands } from '../src/core/registry.js';
+import { AudioModule } from '../src/modules/audio/index.js';
+import { RssModule } from '../src/modules/rss/index.js';
+import { GeneralModule } from '../src/modules/general/index.js';
 import { config, isProduction } from '../src/config.js';
 import { logger } from '../src/logger.js';
 
+loadModules([AudioModule, RssModule, GeneralModule]);
+
 async function main() {
   const rest = new REST({ version: '10' }).setToken(config.DISCORD_TOKEN);
-  const body = commands.map((c) => c.data.toJSON());
+  const body = getAllCommands().map((c) => c.data.toJSON());
 
   if (isProduction) {
     logger.info(`Registering ${body.length} global commands...`);

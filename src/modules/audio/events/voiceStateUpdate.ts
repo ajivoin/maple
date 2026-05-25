@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js';
 import { Events } from 'discord.js';
-import { logger } from '../logger.js';
-import { playerManager } from '../audio/PlayerManager.js';
+import { logger } from '../../../logger.js';
+import { playerManager } from '../PlayerManager.js';
 
 export function registerVoiceStateUpdate(client: Client): void {
   client.on(Events.VoiceStateUpdate, (oldState, _newState) => {
