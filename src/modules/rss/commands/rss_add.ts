@@ -7,6 +7,7 @@ import {
 import Parser from 'rss-parser';
 import { addSubscription, updateAfterPoll } from '../db.js';
 import { buildItemEmbed } from '../service.js';
+import { requireManageChannels } from '../../../permissions.js';
 import { logger } from '../../../logger.js';
 import type { SlashCommand } from '../../../types.js';
 
@@ -32,23 +33,25 @@ const command: SlashCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-      await interaction.reply({
-        content: 'You need the **Manage Channels** permission to use this command.',
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    if (!(await requireManageChannels(interaction))) return;
 
     const url = interaction.options.getString('url', true);
     const customName = interaction.options.getString('name');
     const postLatest = interaction.options.getBoolean('post_latest') ?? true;
 
+    let parsed: URL;
     try {
-      new URL(url);
+      parsed = new URL(url);
     } catch {
       await interaction.reply({
         content: "That doesn't look like a valid URL.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      await interaction.reply({
+        content: 'Only HTTP and HTTPS feed URLs are supported.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -80,8 +83,7 @@ const command: SlashCommand = {
         createdBy: interaction.user.id,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('UNIQUE')) {
+      if (err instanceof Error && (err as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
         await interaction.editReply('This channel is already subscribed to that feed.');
         return;
       }
@@ -102,9 +104,7 @@ const command: SlashCommand = {
           await ch.send({ embeds: [buildItemEmbed(feedName, latestItem)] });
           logger.info(`[rss] Posted latest item "${latestItem.title}" to ${interaction.channelId}`);
         } else {
-          logger.warn(
-            `[rss] Could not send to channel ${interaction.channelId} (sendable=${ch?.isSendable()})`,
-          );
+          logger.warn(`[rss] Could not send to channel ${interaction.channelId} (not sendable)`);
         }
       }
     } else {

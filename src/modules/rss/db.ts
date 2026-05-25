@@ -50,18 +50,20 @@ export function getActiveSubscriptions(): RssSubscription[] {
     .all() as RssSubscription[];
 }
 
-export function pauseSubscription(channelId: string, feedUrl: string): void {
-  getDb()
+export function pauseSubscription(channelId: string, feedUrl: string): boolean {
+  const result = getDb()
     .prepare(`UPDATE rss_subscriptions SET paused = 1 WHERE channel_id = ? AND feed_url = ?`)
     .run(channelId, feedUrl);
+  return result.changes > 0;
 }
 
-export function resumeSubscription(channelId: string, feedUrl: string): void {
-  getDb()
+export function resumeSubscription(channelId: string, feedUrl: string): boolean {
+  const result = getDb()
     .prepare(
       `UPDATE rss_subscriptions SET paused = 0, error_count = 0 WHERE channel_id = ? AND feed_url = ?`,
     )
     .run(channelId, feedUrl);
+  return result.changes > 0;
 }
 
 export function updateAfterPoll(

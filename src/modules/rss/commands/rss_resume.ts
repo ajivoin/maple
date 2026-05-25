@@ -6,6 +6,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import { listSubscriptions, resumeSubscription } from '../db.js';
+import { requireManageChannels } from '../../../permissions.js';
 import type { SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
@@ -37,16 +38,18 @@ const command: SlashCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+    if (!(await requireManageChannels(interaction))) return;
+
+    const url = interaction.options.getString('url', true);
+    const resumed = resumeSubscription(interaction.channelId, url);
+
+    if (!resumed) {
       await interaction.reply({
-        content: 'You need the **Manage Channels** permission to use this command.',
+        content: 'No paused subscription found for that feed URL in this channel.',
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-
-    const url = interaction.options.getString('url', true);
-    resumeSubscription(interaction.channelId, url);
 
     await interaction.reply({
       content: `Resumed RSS feed: **${url}**.`,

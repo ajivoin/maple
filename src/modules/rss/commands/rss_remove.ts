@@ -6,6 +6,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 import { listSubscriptions, removeSubscription } from '../db.js';
+import { requireManageChannels } from '../../../permissions.js';
 import type { SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
@@ -37,13 +38,7 @@ const command: SlashCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-      await interaction.reply({
-        content: 'You need the **Manage Channels** permission to use this command.',
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    if (!(await requireManageChannels(interaction))) return;
 
     const url = interaction.options.getString('url', true);
     const removed = removeSubscription(interaction.channelId, url);

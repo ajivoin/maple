@@ -85,9 +85,12 @@ export class RssPoller {
     }
 
     if (sub.last_item_date) {
+      const lastIdx = items.findIndex((item) => (item.guid ?? item.link) === sub.last_item_guid);
       return items.filter((item) => {
         const itemDate = item.isoDate ? new Date(item.isoDate).getTime() : null;
-        return itemDate !== null && itemDate > sub.last_item_date!;
+        if (itemDate !== null) return itemDate > sub.last_item_date!;
+        // No date on this item — fall back to GUID position (earlier index = newer in feeds)
+        return lastIdx !== -1 && items.indexOf(item) < lastIdx;
       });
     }
 

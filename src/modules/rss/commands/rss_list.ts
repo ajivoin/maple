@@ -24,9 +24,13 @@ const command: SlashCommand = {
       return;
     }
 
+    const MAX_FIELDS = 25;
+    const truncated = subs.length > MAX_FIELDS;
+    const visible = subs.slice(0, MAX_FIELDS);
+
     const embed = new EmbedBuilder().setTitle('RSS Feeds in this channel').setColor(0x5865f2);
 
-    for (const sub of subs) {
+    for (const sub of visible) {
       const status = sub.paused ? '⏸ Paused' : '✅ Active';
       const lastChecked = sub.last_checked_at
         ? `<t:${Math.floor(sub.last_checked_at / 1000)}:R>`
@@ -35,6 +39,10 @@ const command: SlashCommand = {
         name: sub.feed_name ?? sub.feed_url,
         value: `${status} · Last checked: ${lastChecked}\n${sub.feed_url}`,
       });
+    }
+
+    if (truncated) {
+      embed.setFooter({ text: `Showing 25 of ${subs.length} feeds — remove some to see the rest` });
     }
 
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
