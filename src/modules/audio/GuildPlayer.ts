@@ -10,8 +10,8 @@ import {
   joinVoiceChannel,
 } from '@discordjs/voice';
 import type { GuildTextBasedChannel, VoiceBasedChannel } from 'discord.js';
-import { logger } from '../logger.js';
-import type { LoopMode, Track } from '../types.js';
+import { logger } from '../../logger.js';
+import type { LoopMode, Track } from '../../types.js';
 import { createAudioStream } from './ytdlp.js';
 
 const IDLE_DISCONNECT_MS = 60_000;

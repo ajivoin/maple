@@ -9,3 +9,9 @@ services:
       - .env
     environment:
       NODE_ENV: production
+      DATABASE_PATH: /data/maple.db
+    volumes:
+      - maple_data:/data
+
+volumes:
+  maple_data:

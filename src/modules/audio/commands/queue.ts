@@ -4,9 +4,9 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js';
-import { playerManager } from '../audio/PlayerManager.js';
-import type { SlashCommand } from '../types.js';
-import { formatDuration } from '../util.js';
+import { playerManager } from '../PlayerManager.js';
+import type { SlashCommand } from '../../../types.js';
+import { formatDuration } from '../../../util.js';
 
 const DISPLAY_LIMIT = 10;
 

@@ -1,18 +1,23 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client } from 'discord.js';
+import { initDb } from './db/index.js';
+import { loadModules } from './core/loader.js';
+import { registerInteractions } from './core/interactionCreate.js';
+import { registerReady } from './core/ready.js';
+import { AudioModule } from './modules/audio/index.js';
+import { RssModule } from './modules/rss/index.js';
+import { GeneralModule } from './modules/general/index.js';
 import { config } from './config.js';
-import { deployCommands } from './deploy-commands.js';
-import { registerInteractions } from './events/interactionCreate.js';
-import { registerReady } from './events/ready.js';
-import { registerVoiceStateUpdate } from './events/voiceStateUpdate.js';
 import { logger } from './logger.js';
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
-});
+initDb();
 
-registerReady(client);
+const { intents, registerEvents, onReady } = loadModules([AudioModule, RssModule, GeneralModule]);
+
+const client = new Client({ intents });
+
+registerEvents(client);
 registerInteractions(client);
-registerVoiceStateUpdate(client);
+registerReady(client, onReady);
 
 process.on('unhandledRejection', (err) => logger.error('Unhandled rejection:', err));
 process.on('uncaughtException', (err) => logger.error('Uncaught exception:', err));
@@ -23,12 +28,6 @@ const shutdown = (signal: string) => {
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
-
-try {
-  await deployCommands();
-} catch (err) {
-  logger.error('Command deployment failed, continuing with existing registration:', err);
-}
 
 client.login(config.DISCORD_TOKEN).catch((err) => {
   logger.error('Login failed:', err);

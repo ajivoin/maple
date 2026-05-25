@@ -4,10 +4,10 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from 'discord.js';
-import { playerManager } from '../audio/PlayerManager.js';
-import { YtDlpError, resolveUrl } from '../audio/ytdlp.js';
-import { logger } from '../logger.js';
-import type { SlashCommand } from '../types.js';
+import { playerManager } from '../PlayerManager.js';
+import { YtDlpError, resolveUrl } from '../ytdlp.js';
+import { logger } from '../../../logger.js';
+import type { SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
   data: new SlashCommandBuilder()
