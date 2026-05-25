@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import type { Readable } from 'node:stream';
+import { config } from '../../config.js';
 import { logger } from '../../logger.js';
 
 export class YtDlpError extends Error {}
@@ -120,7 +121,7 @@ export type AudioStream = {
 export function createAudioStream(url: string): AudioStream {
   logger.debug(`Spawning yt-dlp audio stream for: ${url}`);
   const child = spawn(
-    'yt-dlp',
+    config.YTDLP_PATH,
     ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--no-warnings', '--', url],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
@@ -167,7 +168,7 @@ function runYtDlp(args: string[]): {
   promise: Promise<{ stdout: string; stderr: string; code: number | null }>;
   child: ChildProcess;
 } {
-  const child = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(config.YTDLP_PATH, args, { stdio: ['ignore', 'pipe', 'pipe'] });
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
 

@@ -32,7 +32,7 @@ const command: SlashCommand = {
       )
       .slice(0, 25)
       .map((s) => ({ name: s.feed_name ?? s.feed_url, value: s.feed_url }));
-    await interaction.respond(choices);
+    await interaction.respond(choices).catch(() => null);
   },
 
   async execute(interaction: ChatInputCommandInteraction) {

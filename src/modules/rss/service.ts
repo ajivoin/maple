@@ -5,6 +5,18 @@ import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
 
+export function buildItemEmbed(feedTitle: string, item: Parser.Item): EmbedBuilder {
+  const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
+  const description = raw ? (/spoiler/i.test(raw) ? `||${raw}||` : raw) : null;
+  return new EmbedBuilder()
+    .setTitle(item.title ?? 'New post')
+    .setURL(item.link ?? null)
+    .setDescription(description)
+    .setFooter({ text: feedTitle })
+    .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
+    .setColor(0x5865f2);
+}
+
 const parser = new Parser();
 const MAX_ERROR_COUNT = 3;
 
@@ -39,9 +51,15 @@ export class RssPoller {
     try {
       const feed = await parser.parseURL(sub.feed_url);
       const newItems = this.filterNewItems(feed.items, sub);
+      const feedTitle = feed.title ?? sub.feed_name ?? 'RSS Feed';
 
-      for (const item of newItems.slice().reverse()) {
-        await this.postItem(sub.channel_id, feed.title ?? sub.feed_name ?? 'RSS Feed', item);
+      if (newItems.length > 0) {
+        const channel = await this.client.channels.fetch(sub.channel_id).catch(() => null);
+        if (channel?.isSendable()) {
+          for (const item of newItems.slice().reverse()) {
+            await channel.send({ embeds: [buildItemEmbed(feedTitle, item)] });
+          }
+        }
       }
 
       const latest = newItems[0];
@@ -66,33 +84,18 @@ export class RssPoller {
       return [];
     }
 
-    return items.filter((item) => {
-      if (sub.last_item_date) {
+    if (sub.last_item_date) {
+      return items.filter((item) => {
         const itemDate = item.isoDate ? new Date(item.isoDate).getTime() : null;
-        if (itemDate && itemDate > sub.last_item_date!) return true;
-      }
-      if (sub.last_item_guid) {
-        const itemId = item.guid ?? item.link;
-        if (itemId && itemId !== sub.last_item_guid) return true;
-      }
-      return false;
-    });
-  }
+        return itemDate !== null && itemDate > sub.last_item_date!;
+      });
+    }
 
-  private async postItem(channelId: string, feedTitle: string, item: Parser.Item): Promise<void> {
-    const channel = await this.client.channels.fetch(channelId).catch(() => null);
-    if (!channel?.isSendable()) return;
-
-    const description = (item.contentSnippet ?? item.summary ?? '').slice(0, 200) || null;
-    const embed = new EmbedBuilder()
-      .setTitle(item.title ?? 'New post')
-      .setURL(item.link ?? null)
-      .setDescription(description)
-      .setFooter({ text: feedTitle })
-      .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
-      .setColor(0x5865f2);
-
-    await channel.send({ embeds: [embed] });
+    // Fallback for date-less feeds: items appearing before the last-seen GUID
+    // in feed order are newer (feeds are reverse-chronological).
+    const lastIdx = items.findIndex((item) => (item.guid ?? item.link) === sub.last_item_guid);
+    if (lastIdx === -1) return [];
+    return items.slice(0, lastIdx);
   }
 
   private async postWarning(

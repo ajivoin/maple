@@ -21,13 +21,14 @@ export function addSubscription(params: {
   feedUrl: string;
   feedName: string | null;
   createdBy: string;
-}): void {
-  getDb()
+}): number {
+  const result = getDb()
     .prepare(
       `INSERT INTO rss_subscriptions (guild_id, channel_id, feed_url, feed_name, created_by)
        VALUES (?, ?, ?, ?, ?)`,
     )
     .run(params.guildId, params.channelId, params.feedUrl, params.feedName, params.createdBy);
+  return Number(result.lastInsertRowid);
 }
 
 export function removeSubscription(channelId: string, feedUrl: string): boolean {
