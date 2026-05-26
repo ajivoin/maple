@@ -6,8 +6,13 @@ import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
 
 export function buildItemEmbed(feedTitle: string, item: Parser.Item, color?: number): EmbedBuilder {
-  const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
-  const description = raw ? (/spoiler/i.test(raw) ? `||${raw}||` : raw) : null;
+  const content = item.contentSnippet ?? item.summary ?? '';
+  const isSpoiler = /spoiler/i.test(content);
+  const cleaned = isSpoiler
+    ? content.replace(/^This review may contain spoilers\.\s*/i, '').trim()
+    : content;
+  const raw = cleaned.slice(0, 200);
+  const description = raw ? (isSpoiler ? `||${raw}||` : raw) : null;
   return new EmbedBuilder()
     .setTitle(item.title ?? 'New post')
     .setURL(item.link ?? null)
