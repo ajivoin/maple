@@ -16,10 +16,16 @@ CREATE TABLE IF NOT EXISTS rss_subscriptions (
   error_count INTEGER DEFAULT 0,
   created_by TEXT NOT NULL,
   created_at INTEGER DEFAULT (unixepoch()),
+  color INTEGER,
   UNIQUE(channel_id, feed_url)
 );
 `;
 
 export function initializeSchema(db: Database.Database): void {
   db.exec(DDL);
+  try {
+    db.exec('ALTER TABLE rss_subscriptions ADD COLUMN color INTEGER');
+  } catch {
+    // column already exists on databases created before this migration
+  }
 }

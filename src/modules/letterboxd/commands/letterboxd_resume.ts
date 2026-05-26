@@ -5,14 +5,14 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { listSubscriptions, removeSubscription } from '../../rss/db.js';
+import { listSubscriptions, resumeSubscription } from '../../rss/db.js';
 import { buildFeedUrl, isLetterboxdFeed, usernameFromFeedUrl } from '../feeds.js';
 import type { SlashCommand } from '../../../types.js';
 
 const command: SlashCommand = {
   data: new SlashCommandBuilder()
-    .setName('letterboxd_remove')
-    .setDescription('Unsubscribe this channel from a Letterboxd diary.')
+    .setName('letterboxd_resume')
+    .setDescription('Resume a paused Letterboxd diary subscription in this channel.')
     .addStringOption((opt) =>
       opt
         .setName('username')
@@ -22,8 +22,8 @@ const command: SlashCommand = {
     ),
 
   async autocomplete(interaction: AutocompleteInteraction) {
-    const subs = listSubscriptions(interaction.channelId ?? '').filter((s) =>
-      isLetterboxdFeed(s.feed_url),
+    const subs = listSubscriptions(interaction.channelId ?? '').filter(
+      (s) => isLetterboxdFeed(s.feed_url) && s.paused,
     );
     const focused = interaction.options.getFocused().toLowerCase();
     const choices = subs
@@ -55,21 +55,29 @@ const command: SlashCommand = {
       return;
     }
 
-    const hasManage =
-      interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ?? false;
-    if (sub.created_by !== interaction.user.id && !hasManage) {
+    if (!sub.paused) {
       await interaction.reply({
-        content:
-          'You can only remove subscriptions you created. Members with Manage Channels can remove any subscription.',
+        content: `**${username}**'s Letterboxd diary is not paused.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    removeSubscription(interaction.channelId, url);
+    const hasManage =
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ?? false;
+    if (sub.created_by !== interaction.user.id && !hasManage) {
+      await interaction.reply({
+        content:
+          'You can only resume subscriptions you created. Members with Manage Channels can resume any subscription.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    resumeSubscription(interaction.channelId, url);
 
     await interaction.reply({
-      content: `Unsubscribed from **${username}**'s Letterboxd diary.`,
+      content: `Resumed **${username}**'s Letterboxd diary.`,
       flags: MessageFlags.Ephemeral,
     });
   },

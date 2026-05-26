@@ -34,7 +34,7 @@ const command: SlashCommand = {
       return;
     }
 
-    const feedName = `${feed.title ?? username}'s Letterboxd`;
+    const feedName = feed.title ?? `${username}'s Letterboxd diary`;
 
     let subId: number;
     try {
@@ -44,6 +44,7 @@ const command: SlashCommand = {
         feedUrl: url,
         feedName,
         createdBy: interaction.user.id,
+        color: 0x00e054,
       });
     } catch (err: unknown) {
       if (err instanceof Error && (err as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -62,19 +63,21 @@ const command: SlashCommand = {
         lastItemGuid: latestItem.guid ?? latestItem.link ?? null,
         lastItemDate: latestItem.isoDate ? new Date(latestItem.isoDate).getTime() : null,
       });
-
-      const ch = interaction.channel;
-      if (ch?.isSendable()) {
-        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem)] });
-        logger.info(
-          `[letterboxd] Posted latest diary entry for ${username} to ${interaction.channelId}`,
-        );
-      }
     }
 
     await interaction.editReply(
       `Subscribed to **${username}**'s Letterboxd diary in this channel.`,
     );
+
+    if (latestItem) {
+      const ch = interaction.channel;
+      if (ch?.isSendable()) {
+        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem, 0x00e054)] });
+        logger.info(
+          `[letterboxd] Posted latest diary entry for ${username} to ${interaction.channelId}`,
+        );
+      }
+    }
   },
 };
 

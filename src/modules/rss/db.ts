@@ -13,6 +13,7 @@ export type RssSubscription = {
   error_count: number;
   created_by: string;
   created_at: number;
+  color: number | null;
 };
 
 export function addSubscription(params: {
@@ -21,13 +22,21 @@ export function addSubscription(params: {
   feedUrl: string;
   feedName: string | null;
   createdBy: string;
+  color?: number;
 }): number {
   const result = getDb()
     .prepare(
-      `INSERT INTO rss_subscriptions (guild_id, channel_id, feed_url, feed_name, created_by)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO rss_subscriptions (guild_id, channel_id, feed_url, feed_name, created_by, color)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .run(params.guildId, params.channelId, params.feedUrl, params.feedName, params.createdBy);
+    .run(
+      params.guildId,
+      params.channelId,
+      params.feedUrl,
+      params.feedName,
+      params.createdBy,
+      params.color ?? null,
+    );
   return Number(result.lastInsertRowid);
 }
 

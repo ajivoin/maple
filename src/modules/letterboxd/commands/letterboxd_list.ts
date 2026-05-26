@@ -30,7 +30,7 @@ const command: SlashCommand = {
 
     const embed = new EmbedBuilder()
       .setTitle('Letterboxd Diaries in this channel')
-      .setColor(0xd4502a);
+      .setColor(0x00e054);
 
     for (const sub of subs.slice(0, 25)) {
       const username = usernameFromFeedUrl(sub.feed_url) ?? sub.feed_url;
@@ -42,6 +42,10 @@ const command: SlashCommand = {
         name: username,
         value: `${status} · Last checked: ${lastChecked}`,
       });
+    }
+
+    if (subs.length > 25) {
+      embed.setFooter({ text: `Showing 25 of ${subs.length} subscriptions` });
     }
 
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });

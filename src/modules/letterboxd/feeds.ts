@@ -1,9 +1,9 @@
 export function buildFeedUrl(username: string): string {
-  return `https://letterboxd.com/${encodeURIComponent(username)}/rss/`;
+  return `https://letterboxd.com/${encodeURIComponent(username.toLowerCase())}/rss/`;
 }
 
 export function isLetterboxdFeed(url: string): boolean {
-  return url.includes('letterboxd.com');
+  return /letterboxd\.com\/[^/]+\/rss\/?/.test(url);
 }
 
 export function usernameFromFeedUrl(url: string): string | null {

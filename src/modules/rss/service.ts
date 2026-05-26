@@ -5,7 +5,7 @@ import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
 
-export function buildItemEmbed(feedTitle: string, item: Parser.Item): EmbedBuilder {
+export function buildItemEmbed(feedTitle: string, item: Parser.Item, color?: number): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
   const description = raw ? (/spoiler/i.test(raw) ? `||${raw}||` : raw) : null;
   return new EmbedBuilder()
@@ -14,7 +14,7 @@ export function buildItemEmbed(feedTitle: string, item: Parser.Item): EmbedBuild
     .setDescription(description)
     .setFooter({ text: feedTitle })
     .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
-    .setColor(0x5865f2);
+    .setColor(color ?? 0x5865f2);
 }
 
 const parser = new Parser();
@@ -57,7 +57,9 @@ export class RssPoller {
         const channel = await this.client.channels.fetch(sub.channel_id).catch(() => null);
         if (channel?.isSendable()) {
           for (const item of newItems.slice().reverse()) {
-            await channel.send({ embeds: [buildItemEmbed(feedTitle, item)] });
+            await channel.send({
+              embeds: [buildItemEmbed(feedTitle, item, sub.color ?? undefined)],
+            });
           }
         }
       }
