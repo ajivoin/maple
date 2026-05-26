@@ -9,7 +9,7 @@ export function buildItemEmbed(feedTitle: string, item: Parser.Item, color?: num
   const content = item.contentSnippet ?? item.summary ?? '';
   const isSpoiler = /spoiler/i.test(content);
   const cleaned = isSpoiler
-    ? content.replace(/^This review may contain spoilers\.\s*/i, '').trim()
+    ? content.replace(/^This review may contain spoilers\./i, '').trim()
     : content;
   const raw = cleaned.slice(0, 200);
   const description = raw ? (isSpoiler ? `||${raw}||` : raw) : null;
