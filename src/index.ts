@@ -5,13 +5,19 @@ import { registerInteractions } from './core/interactionCreate.js';
 import { registerReady } from './core/ready.js';
 import { AudioModule } from './modules/audio/index.js';
 import { RssModule } from './modules/rss/index.js';
+import { LetterboxdModule } from './modules/letterboxd/index.js';
 import { GeneralModule } from './modules/general/index.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 
 initDb();
 
-const { intents, registerEvents, onReady } = loadModules([AudioModule, RssModule, GeneralModule]);
+const { intents, registerEvents, onReady } = loadModules([
+  AudioModule,
+  RssModule,
+  LetterboxdModule,
+  GeneralModule,
+]);
 
 const client = new Client({ intents });
 
