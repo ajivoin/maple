@@ -7,7 +7,7 @@ import type { RssSubscription } from './db.js';
 
 export function buildItemEmbed(feedTitle: string, item: Parser.Item): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
-  const description = raw ? (/spoiler/i.test(raw) ? `||${raw}||` : raw) : null;
+  const description = raw && !/spoiler/i.test(raw) ? raw : null;
   return new EmbedBuilder()
     .setTitle(item.title ?? 'New post')
     .setURL(item.link ?? null)
