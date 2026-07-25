@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from '
 import Parser from 'rss-parser';
 import { addSubscription, updateAfterPoll } from '../../rss/db.js';
 import { buildItemEmbed } from '../../rss/service.js';
-import { buildFeedUrl } from '../feeds.js';
+import { buildFeedUrl, extractPosterUrl } from '../feeds.js';
 import { logger } from '../../../logger.js';
 import type { SlashCommand } from '../../../types.js';
 
@@ -34,7 +34,7 @@ const command: SlashCommand = {
       return;
     }
 
-    const feedName = `${feed.title ?? username}'s Letterboxd`;
+    const feedName = `${username}'s Letterboxd`;
 
     let subId: number;
     try {
@@ -65,7 +65,8 @@ const command: SlashCommand = {
 
       const ch = interaction.channel;
       if (ch?.isSendable()) {
-        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem, false)] });
+        const thumbnailUrl = extractPosterUrl(latestItem);
+        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem, false, thumbnailUrl)] });
         logger.info(
           `[letterboxd] Posted latest diary entry for ${username} to ${interaction.channelId}`,
         );

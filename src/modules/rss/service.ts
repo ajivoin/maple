@@ -4,21 +4,25 @@ import { logger } from '../../logger.js';
 import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
+import { extractPosterUrl } from '../letterboxd/feeds.js';
 
 export function buildItemEmbed(
   feedTitle: string,
   item: Parser.Item,
   includeDescription = true,
+  thumbnailUrl?: string | null,
 ): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
   const description = includeDescription && raw && !/spoiler/i.test(raw) ? raw : null;
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle(item.title ?? 'New post')
     .setURL(item.link ?? null)
     .setDescription(description)
     .setFooter({ text: feedTitle })
     .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
     .setColor(0x5865f2);
+  if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
+  return embed;
 }
 
 const parser = new Parser();
@@ -55,14 +59,17 @@ export class RssPoller {
     try {
       const feed = await parser.parseURL(sub.feed_url);
       const newItems = this.filterNewItems(feed.items, sub);
-      const feedTitle = feed.title ?? sub.feed_name ?? 'RSS Feed';
+      const feedTitle = sub.feed_name ?? feed.title ?? 'RSS Feed';
 
       if (newItems.length > 0) {
         const channel = await this.client.channels.fetch(sub.channel_id).catch(() => null);
         if (channel?.isSendable()) {
           const isLetterboxd = sub.feed_url.includes('letterboxd.com');
           for (const item of newItems.slice().reverse()) {
-            await channel.send({ embeds: [buildItemEmbed(feedTitle, item, !isLetterboxd)] });
+            const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
+            await channel.send({
+              embeds: [buildItemEmbed(feedTitle, item, !isLetterboxd, thumbnailUrl)],
+            });
           }
         }
       }
