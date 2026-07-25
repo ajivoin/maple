@@ -7,9 +7,9 @@ import { extractPosterUrl } from '../modules/letterboxd/feeds.js';
 import { buildItemEmbed } from '../modules/rss/service.js';
 
 describe('extractPosterUrl', () => {
-  it('extracts src from an img tag in item.summary', () => {
+  it('extracts src from an img tag in item.content (RSS 2.0 <description>)', () => {
     const item = {
-      summary:
+      content:
         '<p><img src="https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg"/></p><p>Watched on Sunday.</p>',
     } as Parser.Item;
     expect(extractPosterUrl(item)).toBe(
@@ -17,12 +17,22 @@ describe('extractPosterUrl', () => {
     );
   });
 
-  it('returns null when summary has no img tag', () => {
-    const item = { summary: '<p>No image here.</p>' } as Parser.Item;
+  it('falls back to item.summary when content is absent (Atom feeds)', () => {
+    const item = {
+      summary:
+        '<p><img src="https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg"/></p>',
+    } as Parser.Item;
+    expect(extractPosterUrl(item)).toBe(
+      'https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg',
+    );
+  });
+
+  it('returns null when neither field has an img tag', () => {
+    const item = { content: '<p>No image here.</p>' } as Parser.Item;
     expect(extractPosterUrl(item)).toBeNull();
   });
 
-  it('returns null when summary is undefined', () => {
+  it('returns null when both fields are absent', () => {
     expect(extractPosterUrl({} as Parser.Item)).toBeNull();
   });
 });
