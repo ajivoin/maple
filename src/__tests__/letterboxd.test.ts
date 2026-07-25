@@ -19,8 +19,7 @@ describe('extractPosterUrl', () => {
 
   it('falls back to item.summary when content is absent (Atom feeds)', () => {
     const item = {
-      summary:
-        '<p><img src="https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg"/></p>',
+      summary: '<p><img src="https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg"/></p>',
     } as Parser.Item;
     expect(extractPosterUrl(item)).toBe(
       'https://a.ltrbxd.com/resized/film-poster/50517-rush-hour.jpg',
