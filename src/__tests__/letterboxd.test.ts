@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type Parser from 'rss-parser';
+
+vi.mock('../config.js', () => ({ config: { RSS_POLL_INTERVAL_MS: 600000 } }));
+
 import { extractPosterUrl } from '../modules/letterboxd/feeds.js';
 import { buildItemEmbed } from '../modules/rss/service.js';
 
