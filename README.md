@@ -1,19 +1,51 @@
 # maple
 
-A Discord audio bot built with [discord.js](https://discord.js.org) v14 and [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+A general-purpose Discord bot built with [discord.js](https://discord.js.org) v14. Features audio playback via [yt-dlp](https://github.com/yt-dlp/yt-dlp), RSS feed subscriptions, and Letterboxd diary subscriptions.
 
 ## Features
 
-Slash commands, per-guild queue, in-memory state:
+### Audio
+
+Per-guild voice queue with in-memory state:
 
 | Command | Description |
 |---|---|
-| `/play query:<url or search>` | Join your voice channel and play or enqueue a track. Accepts URLs (YouTube, SoundCloud, etc.) or free-text search (defaults to YouTube). |
+| `/play url:<url>` | Join your voice channel and play a track from a direct URL. |
+| `/search query:<text>` | Search YouTube and play the top result. |
 | `/pause` | Pause or resume the current track. |
 | `/stop` | Clear the queue and disconnect. |
 | `/skip` | Skip to the next track. |
 | `/rewind` | Restart the current track from the beginning. |
-| `/save` | DM yourself the link to the currently playing track. |
+| `/queue` | Show the current queue. |
+| `/nowplaying` | Show the currently playing track. |
+| `/loop mode:<off\|track\|queue>` | Set the loop mode. |
+| `/shuffle` | Randomly shuffle the upcoming tracks. |
+| `/remove position:<n>` | Remove a track from the queue by position. |
+| `/save` | DM yourself a link to the currently playing track. |
+
+### RSS feeds
+
+Subscribe channels to any RSS/Atom feed. New items are posted as embeds automatically.
+
+| Command | Description |
+|---|---|
+| `/rss_add url:<url>` | Subscribe this channel to an RSS feed. Pass `post_latest:false` to skip posting the most recent item on subscribe. |
+| `/rss_list` | List all RSS feeds subscribed in this channel. |
+| `/rss_remove url:<url>` | Unsubscribe this channel from an RSS feed. |
+| `/rss_pause url:<url>` | Pause a feed subscription without removing it. |
+| `/rss_resume url:<url>` | Resume a paused feed subscription. |
+
+Feeds that fail 3 consecutive polls are paused automatically and a warning is posted to the channel.
+
+### Letterboxd
+
+Subscribe channels to a Letterboxd member's film diary. New diary entries are posted as embeds with the movie poster thumbnail.
+
+| Command | Description |
+|---|---|
+| `/letterboxd_add username:<user>` | Subscribe this channel to a Letterboxd diary. Posts the most recent entry immediately. |
+| `/letterboxd_list` | List all Letterboxd diaries subscribed in this channel. |
+| `/letterboxd_remove username:<user>` | Unsubscribe this channel from a Letterboxd diary. |
 
 ## Requirements
 
@@ -33,8 +65,10 @@ The Docker image installs `ffmpeg` and `yt-dlp` for you.
    - `CLIENT_ID` — application (client) ID.
    - `DEV_GUILD_ID` — only needed in development; the guild in which slash commands are registered instantly.
    - `NODE_ENV` — `development` or `production`.
+   - `RSS_POLL_INTERVAL_MS` — how often to poll RSS/Letterboxd feeds (default: `600000` = 10 min).
+   - `DATABASE_PATH` — path to the SQLite database file (default: `./data/maple.db`).
 
-2. Invite the bot to your server with `bot` + `applications.commands` scopes and the **Connect** and **Speak** voice permissions.
+2. Invite the bot to your server with `bot` + `applications.commands` scopes and the **Connect**, **Speak**, and **Send Messages** permissions.
 
 ## Local development
 
@@ -76,14 +110,13 @@ src/
   index.ts                  Entry point
   config.ts                 Env loading and validation (zod)
   logger.ts
-  commands/                 Slash command handlers
-  audio/
-    PlayerManager.ts        Map of guildId -> GuildPlayer
-    GuildPlayer.ts          Queue + voice connection per guild
-    ytdlp.ts                yt-dlp wrapper (metadata + audio stream)
-  events/
-    interactionCreate.ts
-    ready.ts
+  modules/
+    audio/                  Voice queue, yt-dlp integration
+    rss/                    RSS/Atom feed polling and subscriptions
+    letterboxd/             Letterboxd diary subscriptions
+    general/                /help and other utility commands
+  core/                     Command registry, interaction router, loader
+  db/                       SQLite schema and singleton (better-sqlite3)
 scripts/
   deploy-commands.ts        Registers slash commands
 ```
