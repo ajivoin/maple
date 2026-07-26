@@ -3,7 +3,7 @@ import type Parser from 'rss-parser';
 
 vi.mock('../config.js', () => ({ config: { RSS_POLL_INTERVAL_MS: 600000 } }));
 
-import { extractPosterUrl } from '../modules/letterboxd/feeds.js';
+import { extractPosterUrl, extractReviewText } from '../modules/letterboxd/feeds.js';
 import { buildItemEmbed, truncateAtWord } from '../modules/rss/service.js';
 
 describe('extractPosterUrl', () => {
@@ -33,6 +33,29 @@ describe('extractPosterUrl', () => {
 
   it('returns null when both fields are absent', () => {
     expect(extractPosterUrl({} as Parser.Item)).toBeNull();
+  });
+});
+
+describe('extractReviewText', () => {
+  it('returns null when only the watched-on line is present', () => {
+    const item = { contentSnippet: 'Watched on Friday July 24, 2026.' } as Parser.Item;
+    expect(extractReviewText(item)).toBeNull();
+  });
+
+  it('strips the watched-on line and returns the review', () => {
+    const item = {
+      contentSnippet: 'A fantastic film.\n\nWatched on Friday July 24, 2026.',
+    } as Parser.Item;
+    expect(extractReviewText(item)).toBe('A fantastic film.');
+  });
+
+  it('returns the review unchanged when no watched-on line is present', () => {
+    const item = { contentSnippet: 'Just a plain review.' } as Parser.Item;
+    expect(extractReviewText(item)).toBe('Just a plain review.');
+  });
+
+  it('returns null when contentSnippet is absent', () => {
+    expect(extractReviewText({} as Parser.Item)).toBeNull();
   });
 });
 

@@ -1,5 +1,11 @@
 import type Parser from 'rss-parser';
 
+export function extractReviewText(item: Parser.Item): string | null {
+  const snippet = item.contentSnippet ?? item.summary ?? '';
+  const cleaned = snippet.replace(/Watched on \w+ \w+ \d+, \d+\./g, '').trim();
+  return cleaned || null;
+}
+
 export function extractPosterUrl(item: Parser.Item): string | null {
   const match = (item.content ?? item.summary ?? '').match(/<img[^>]+src="([^"]+)"/);
   return match?.[1] ?? null;

@@ -4,7 +4,7 @@ import { logger } from '../../logger.js';
 import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
-import { extractPosterUrl } from '../letterboxd/feeds.js';
+import { extractPosterUrl, extractReviewText } from '../letterboxd/feeds.js';
 
 const DESCRIPTION_MAX_CHARS = 300;
 
@@ -76,8 +76,11 @@ export class RssPoller {
           const isLetterboxd = sub.feed_url.includes('letterboxd.com');
           for (const item of newItems.slice().reverse()) {
             const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
+            const cleaned = isLetterboxd
+              ? { ...item, contentSnippet: extractReviewText(item) ?? undefined }
+              : item;
             await channel.send({
-              embeds: [buildItemEmbed(feedTitle, item, true, thumbnailUrl)],
+              embeds: [buildItemEmbed(feedTitle, cleaned, true, thumbnailUrl)],
             });
           }
         }
