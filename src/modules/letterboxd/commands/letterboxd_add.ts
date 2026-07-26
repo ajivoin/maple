@@ -66,7 +66,7 @@ const command: SlashCommand = {
       const ch = interaction.channel;
       if (ch?.isSendable()) {
         const thumbnailUrl = extractPosterUrl(latestItem);
-        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem, false, thumbnailUrl)] });
+        await ch.send({ embeds: [buildItemEmbed(feedName, latestItem, true, thumbnailUrl)] });
         logger.info(
           `[letterboxd] Posted latest diary entry for ${username} to ${interaction.channelId}`,
         );

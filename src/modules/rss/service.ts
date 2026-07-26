@@ -6,14 +6,23 @@ import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
 import { extractPosterUrl } from '../letterboxd/feeds.js';
 
+const DESCRIPTION_MAX_CHARS = 300;
+
+export function truncateAtWord(text: string): string {
+  if (text.length <= DESCRIPTION_MAX_CHARS) return text;
+  const cut = text.lastIndexOf(' ', DESCRIPTION_MAX_CHARS);
+  return text.slice(0, cut > 0 ? cut : DESCRIPTION_MAX_CHARS) + ' [...]';
+}
+
 export function buildItemEmbed(
   feedTitle: string,
   item: Parser.Item,
   includeDescription = true,
   thumbnailUrl?: string | null,
 ): EmbedBuilder {
-  const raw = (item.contentSnippet ?? item.summary ?? '').slice(0, 200);
-  const description = includeDescription && raw && !/spoiler/i.test(raw) ? raw : null;
+  const raw = (item.contentSnippet ?? item.summary ?? '').trim();
+  const description =
+    includeDescription && raw && !/spoiler/i.test(raw) ? truncateAtWord(raw) : null;
   const embed = new EmbedBuilder()
     .setTitle(item.title ?? 'New post')
     .setURL(item.link ?? null)
@@ -68,7 +77,7 @@ export class RssPoller {
           for (const item of newItems.slice().reverse()) {
             const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
             await channel.send({
-              embeds: [buildItemEmbed(feedTitle, item, !isLetterboxd, thumbnailUrl)],
+              embeds: [buildItemEmbed(feedTitle, item, true, thumbnailUrl)],
             });
           }
         }

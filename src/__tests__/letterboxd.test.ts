@@ -4,7 +4,7 @@ import type Parser from 'rss-parser';
 vi.mock('../config.js', () => ({ config: { RSS_POLL_INTERVAL_MS: 600000 } }));
 
 import { extractPosterUrl } from '../modules/letterboxd/feeds.js';
-import { buildItemEmbed } from '../modules/rss/service.js';
+import { buildItemEmbed, truncateAtWord } from '../modules/rss/service.js';
 
 describe('extractPosterUrl', () => {
   it('extracts src from an img tag in item.content (RSS 2.0 <description>)', () => {
@@ -33,6 +33,27 @@ describe('extractPosterUrl', () => {
 
   it('returns null when both fields are absent', () => {
     expect(extractPosterUrl({} as Parser.Item)).toBeNull();
+  });
+});
+
+describe('truncateAtWord', () => {
+  it('returns text unchanged when within limit', () => {
+    expect(truncateAtWord('short text')).toBe('short text');
+  });
+
+  it('cuts at the last word boundary before the limit and appends [...]', () => {
+    const words = 'word '.repeat(70).trimEnd(); // well over 300 chars
+    const result = truncateAtWord(words);
+    expect(result.endsWith(' [...]')).toBe(true);
+    expect(result.length).toBeLessThanOrEqual(300 + ' [...]'.length);
+    expect(result).not.toMatch(/word word\S/); // no mid-word cut
+  });
+
+  it('falls back to hard cut when no space exists before the limit', () => {
+    const noSpaces = 'a'.repeat(400);
+    const result = truncateAtWord(noSpaces);
+    expect(result.endsWith(' [...]')).toBe(true);
+    expect(result.length).toBe(300 + ' [...]'.length);
   });
 });
 
