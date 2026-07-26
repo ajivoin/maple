@@ -79,4 +79,28 @@ describe('buildItemEmbed', () => {
     const embed = buildItemEmbed('Dave (Letterboxd)', item, false, null);
     expect(embed.toJSON().thumbnail).toBeUndefined();
   });
+
+  it('includes description when no spoiler line is present', () => {
+    const embed = buildItemEmbed('Dave (Letterboxd)', {
+      ...item,
+      contentSnippet: 'A great film with memorable action sequences.',
+    });
+    expect(embed.toJSON().description).toBe('A great film with memorable action sequences.');
+  });
+
+  it('suppresses description when Letterboxd spoiler line is present', () => {
+    const embed = buildItemEmbed('Dave (Letterboxd)', {
+      ...item,
+      contentSnippet: 'This review may contain spoilers. The ending is shocking.',
+    });
+    expect(embed.toJSON().description).toBeUndefined();
+  });
+
+  it('does not suppress description that merely mentions the word spoiler', () => {
+    const embed = buildItemEmbed('Dave (Letterboxd)', {
+      ...item,
+      contentSnippet: 'I hate spoiler culture but loved this film.',
+    });
+    expect(embed.toJSON().description).toBe('I hate spoiler culture but loved this film.');
+  });
 });

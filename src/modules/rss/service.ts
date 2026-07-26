@@ -21,8 +21,8 @@ export function buildItemEmbed(
   thumbnailUrl?: string | null,
 ): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').trim();
-  const description =
-    includeDescription && raw && !/spoiler/i.test(raw) ? truncateAtWord(raw) : null;
+  const hasSpoilers = raw.includes('This review may contain spoilers.');
+  const description = includeDescription && raw && !hasSpoilers ? truncateAtWord(raw) : null;
   const embed = new EmbedBuilder()
     .setTitle(item.title ?? 'New post')
     .setURL(item.link ?? null)
