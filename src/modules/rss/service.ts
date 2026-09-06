@@ -4,7 +4,12 @@ import { logger } from '../../logger.js';
 import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
-import { extractPosterUrl, extractReviewText, isLetterboxdFeed } from '../letterboxd/feeds.js';
+import {
+  extractPosterUrl,
+  extractReviewText,
+  extractWatchedDate,
+  isLetterboxdFeed,
+} from '../letterboxd/feeds.js';
 
 const DESCRIPTION_MAX_CHARS = 300;
 
@@ -19,6 +24,7 @@ export function buildItemEmbed(
   item: Parser.Item,
   includeDescription = true,
   thumbnailUrl?: string | null,
+  watchedDate?: Date | null,
 ): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').trim();
   const hasSpoilers = raw.includes('This review may contain spoilers.');
@@ -28,7 +34,7 @@ export function buildItemEmbed(
     .setURL(item.link ?? null)
     .setDescription(description)
     .setFooter({ text: feedTitle })
-    .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
+    .setTimestamp(watchedDate ?? (item.isoDate ? new Date(item.isoDate) : null))
     .setColor(0x5865f2);
   if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
   return embed;
@@ -126,11 +132,12 @@ export class RssPoller {
           const isLetterboxd = sub.feed_url.includes('letterboxd.com');
           for (const item of newItems.slice().reverse()) {
             const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
+            const watchedDate = isLetterboxd ? extractWatchedDate(item) : null;
             const cleaned = isLetterboxd
               ? { ...item, contentSnippet: extractReviewText(item) ?? undefined }
               : item;
             await channel.send({
-              embeds: [buildItemEmbed(feedTitle, cleaned, true, thumbnailUrl)],
+              embeds: [buildItemEmbed(feedTitle, cleaned, true, thumbnailUrl, watchedDate)],
             });
           }
         }
