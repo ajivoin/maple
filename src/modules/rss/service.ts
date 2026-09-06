@@ -184,8 +184,8 @@ export class RssPoller {
     if (!channel?.isSendable()) return;
     const label = feedName ?? feedUrl;
     await channel.send(
-      `⚠️ The RSS feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
-        `Fix the feed URL or use \`/rss_resume\` to re-enable it.`,
+      `⚠️ The feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
+        `It will be retried automatically once the feed is reachable again.`,
     );
   }
 
