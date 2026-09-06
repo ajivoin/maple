@@ -115,6 +115,7 @@ export default command;
 
 - `src/modules/rss/db.ts` — CRUD for `rss_subscriptions` table (better-sqlite3, synchronous)
 - `src/modules/rss/service.ts` — `RssPoller` class; started in `RssModule.onReady`; polls every `RSS_POLL_INTERVAL_MS` ms; posts new items as Discord embeds; auto-pauses feeds that fail 3 times
+- Auto-paused feeds are flagged with `auto_paused = 1`; every `RSS_RETRY_INTERVAL_MS` ms the poller re-checks the auto-paused **Letterboxd** feeds and resumes any that parse again (manual `/rss_pause` clears the flag, so it is never auto-resumed)
 - RSS commands gate write operations behind `PermissionFlagsBits.ManageChannels`
 - `/rss_remove`, `/rss_pause`, `/rss_resume` use Discord autocomplete on the `url` option
 
@@ -158,3 +159,4 @@ npm run format   # Prettier
 | `YOUTUBE_COOKIES_FILE` | No | Absolute path to a Netscape-format cookies file; passed as `--cookies` to yt-dlp for age-restricted videos |
 | `DATABASE_PATH` | No | Path to SQLite DB file (default: `./data/maple.db`) |
 | `RSS_POLL_INTERVAL_MS` | No | How often to poll RSS feeds in ms (default: `600000` = 10 min) |
+| `RSS_RETRY_INTERVAL_MS` | No | How often to retry auto-paused Letterboxd feeds in ms (default: `3600000` = 1 hour) |
