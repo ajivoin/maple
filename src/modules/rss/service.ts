@@ -4,7 +4,7 @@ import { logger } from '../../logger.js';
 import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
-import { extractPosterUrl, extractReviewText } from '../letterboxd/feeds.js';
+import { extractPosterUrl, extractReviewText, isLetterboxdFeed } from '../letterboxd/feeds.js';
 
 const DESCRIPTION_MAX_CHARS = 300;
 
@@ -40,6 +40,7 @@ const MAX_ERROR_COUNT = 3;
 export class RssPoller {
   private client: Client;
   private intervalId: NodeJS.Timeout | null = null;
+  private retryIntervalId: NodeJS.Timeout | null = null;
 
   constructor(client: Client) {
     this.client = client;
@@ -48,12 +49,20 @@ export class RssPoller {
   start(): void {
     void this.poll();
     this.intervalId = setInterval(() => void this.poll(), config.RSS_POLL_INTERVAL_MS);
+    this.retryIntervalId = setInterval(
+      () => void this.retryAutoPaused(),
+      config.RSS_RETRY_INTERVAL_MS,
+    );
   }
 
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
+    }
+    if (this.retryIntervalId) {
+      clearInterval(this.retryIntervalId);
+      this.retryIntervalId = null;
     }
   }
 
@@ -62,6 +71,32 @@ export class RssPoller {
     if (subs.length === 0) return;
     logger.info(`[rss] Polling ${subs.length} active subscription(s).`);
     await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
+  }
+
+  /**
+   * Re-checks Letterboxd feeds the poller paused itself after repeated failures.
+   * A feed that parses again is resumed; one that still fails stays paused and is
+   * retried on the next tick.
+   */
+  async retryAutoPaused(): Promise<void> {
+    const subs = rssDb.getAutoPausedSubscriptions().filter((sub) => isLetterboxdFeed(sub.feed_url));
+    if (subs.length === 0) return;
+    logger.info(`[rss] Retrying ${subs.length} auto-paused Letterboxd subscription(s).`);
+    await Promise.allSettled(subs.map((sub) => this.retryOne(sub)));
+  }
+
+  private async retryOne(sub: RssSubscription): Promise<void> {
+    try {
+      await parser.parseURL(sub.feed_url);
+    } catch (err) {
+      logger.debug(`[rss] Retry failed for ${sub.feed_url}; staying paused:`, err);
+      return;
+    }
+
+    rssDb.resumeAutoPaused(sub.id);
+    logger.info(`[rss] ${sub.feed_url} is reachable again; subscription resumed.`);
+    await this.postRecovery(sub.channel_id, sub.feed_url, sub.feed_name);
+    await this.pollOne({ ...sub, paused: 0, auto_paused: 0, error_count: 0 });
   }
 
   private async pollOne(sub: RssSubscription): Promise<void> {
@@ -137,5 +172,16 @@ export class RssPoller {
       `⚠️ The RSS feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
         `Fix the feed URL or use \`/rss_resume\` to re-enable it.`,
     );
+  }
+
+  private async postRecovery(
+    channelId: string,
+    feedUrl: string,
+    feedName: string | null,
+  ): Promise<void> {
+    const channel = await this.client.channels.fetch(channelId).catch(() => null);
+    if (!channel?.isSendable()) return;
+    const label = feedName ?? feedUrl;
+    await channel.send(`✅ The feed **${label}** is reachable again and has been resumed.`);
   }
 }

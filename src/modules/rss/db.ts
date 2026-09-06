@@ -10,6 +10,7 @@ export type RssSubscription = {
   last_item_guid: string | null;
   last_item_date: number | null;
   paused: number;
+  auto_paused: number;
   error_count: number;
   created_by: string;
   created_at: number;
@@ -50,9 +51,18 @@ export function getActiveSubscriptions(): RssSubscription[] {
     .all() as RssSubscription[];
 }
 
+/** Subscriptions the poller paused itself after repeated failures. */
+export function getAutoPausedSubscriptions(): RssSubscription[] {
+  return getDb()
+    .prepare(`SELECT * FROM rss_subscriptions WHERE paused = 1 AND auto_paused = 1`)
+    .all() as RssSubscription[];
+}
+
 export function pauseSubscription(channelId: string, feedUrl: string): boolean {
   const result = getDb()
-    .prepare(`UPDATE rss_subscriptions SET paused = 1 WHERE channel_id = ? AND feed_url = ?`)
+    .prepare(
+      `UPDATE rss_subscriptions SET paused = 1, auto_paused = 0 WHERE channel_id = ? AND feed_url = ?`,
+    )
     .run(channelId, feedUrl);
   return result.changes > 0;
 }
@@ -60,7 +70,8 @@ export function pauseSubscription(channelId: string, feedUrl: string): boolean {
 export function resumeSubscription(channelId: string, feedUrl: string): boolean {
   const result = getDb()
     .prepare(
-      `UPDATE rss_subscriptions SET paused = 0, error_count = 0 WHERE channel_id = ? AND feed_url = ?`,
+      `UPDATE rss_subscriptions SET paused = 0, auto_paused = 0, error_count = 0
+       WHERE channel_id = ? AND feed_url = ?`,
     )
     .run(channelId, feedUrl);
   return result.changes > 0;
@@ -90,7 +101,16 @@ export function incrementErrorCount(id: number): number {
 }
 
 export function pauseWithError(id: number): void {
-  getDb().prepare(`UPDATE rss_subscriptions SET paused = 1 WHERE id = ?`).run(id);
+  getDb().prepare(`UPDATE rss_subscriptions SET paused = 1, auto_paused = 1 WHERE id = ?`).run(id);
+}
+
+/** Clears an automatic pause once the feed is reachable again. */
+export function resumeAutoPaused(id: number): void {
+  getDb()
+    .prepare(
+      `UPDATE rss_subscriptions SET paused = 0, auto_paused = 0, error_count = 0 WHERE id = ?`,
+    )
+    .run(id);
 }
 
 export function resetErrorCount(id: number): void {

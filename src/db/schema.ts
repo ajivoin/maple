@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS rss_subscriptions (
   last_item_guid TEXT,
   last_item_date INTEGER,
   paused INTEGER DEFAULT 0,
+  auto_paused INTEGER DEFAULT 0,
   error_count INTEGER DEFAULT 0,
   created_by TEXT NOT NULL,
   created_at INTEGER DEFAULT (unixepoch()),
@@ -20,6 +21,22 @@ CREATE TABLE IF NOT EXISTS rss_subscriptions (
 );
 `;
 
+/** Column additions applied to databases created before the column existed. */
+const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  {
+    table: 'rss_subscriptions',
+    column: 'auto_paused',
+    ddl: `ALTER TABLE rss_subscriptions ADD COLUMN auto_paused INTEGER DEFAULT 0`,
+  },
+];
+
 export function initializeSchema(db: Database.Database): void {
   db.exec(DDL);
+
+  for (const migration of COLUMN_MIGRATIONS) {
+    const columns = db.prepare(`PRAGMA table_info(${migration.table})`).all() as { name: string }[];
+    if (!columns.some((col) => col.name === migration.column)) {
+      db.exec(migration.ddl);
+    }
+  }
 }

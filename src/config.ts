@@ -10,6 +10,7 @@ const schema = z.object({
   YTDLP_PATH: z.string().default('yt-dlp'),
   DATABASE_PATH: z.string().default('./data/maple.db'),
   RSS_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(600_000),
+  RSS_RETRY_INTERVAL_MS: z.coerce.number().int().positive().default(3_600_000),
 });
 
 const parsed = schema.safeParse(process.env);
