@@ -37,6 +37,21 @@ export function buildItemEmbed(
 const parser = new Parser();
 const MAX_ERROR_COUNT = 3;
 
+let activePoller: RssPoller | null = null;
+
+/** Starts the shared RSS poller once; subsequent calls return the running instance. */
+export function startRssPoller(client: Client): RssPoller {
+  if (!activePoller) {
+    activePoller = new RssPoller(client);
+    activePoller.start();
+  }
+  return activePoller;
+}
+
+export function getRssPoller(): RssPoller | null {
+  return activePoller;
+}
+
 export class RssPoller {
   private client: Client;
   private intervalId: NodeJS.Timeout | null = null;
