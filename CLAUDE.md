@@ -44,7 +44,7 @@ src/
     letterboxd/
       index.ts          # LetterboxdModule definition; starts RssPoller in onReady
       feeds.ts          # buildFeedUrl(), isLetterboxdFeed(), poster/review extraction
-      commands/         # letterboxd_add, letterboxd_list, letterboxd_remove
+      commands/         # letterboxd_add, letterboxd_list, letterboxd_remove, letterboxd_refresh
     general/
       index.ts          # GeneralModule definition
       commands/
@@ -125,7 +125,8 @@ The `rss` module has no slash commands — it is internal plumbing for the Lette
 
 - `src/modules/letterboxd/` — front-end for tracking Letterboxd users' activity feeds; reuses the RSS backend (`rss/db.ts` for storage, `rss/service.ts` for polling)
 - `feeds.ts` — `buildFeedUrl(username)`, `isLetterboxdFeed(url)`, `usernameFromFeedUrl(url)`, plus poster/review-text extraction from feed items
-- Commands: `/letterboxd_add`, `/letterboxd_list`, `/letterboxd_remove` (`_remove` uses Discord autocomplete on its option)
+- Commands: `/letterboxd_add`, `/letterboxd_list`, `/letterboxd_remove` (`_remove` uses Discord autocomplete on its option), `/letterboxd_refresh`
+- `/letterboxd_refresh` forces an immediate poll of every active Letterboxd feed via `RssPoller.refreshLetterboxd()`; it is the only Letterboxd command that is permission-gated (behind `PermissionFlagsBits.ManageChannels`, enforced by `requireManageChannels` before `deferReply`). `/letterboxd_add`, `/letterboxd_list`, and `/letterboxd_remove` are not permission-gated.
 
 ## Response Conventions
 

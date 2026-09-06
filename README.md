@@ -32,6 +32,7 @@ Subscribe channels to a Letterboxd member's film diary. New diary entries are po
 | `/letterboxd_add username:<user>` | Subscribe this channel to a Letterboxd diary. Posts the most recent entry immediately. |
 | `/letterboxd_list` | List all Letterboxd diaries subscribed in this channel. |
 | `/letterboxd_remove username:<user>` | Unsubscribe this channel from a Letterboxd diary. |
+| `/letterboxd_refresh` | Force an immediate poll of all active Letterboxd feeds. Requires the **Manage Channels** permission. |
 
 Feeds that fail 3 consecutive polls are paused automatically and a warning is posted to the channel; auto-paused feeds are retried hourly and resume once reachable again.
 

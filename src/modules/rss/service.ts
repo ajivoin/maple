@@ -94,6 +94,15 @@ export class RssPoller {
     await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
   }
 
+  /** Immediately polls every active Letterboxd subscription. Returns how many were polled. */
+  async refreshLetterboxd(): Promise<number> {
+    const subs = rssDb.getActiveSubscriptions().filter((sub) => isLetterboxdFeed(sub.feed_url));
+    if (subs.length === 0) return 0;
+    logger.info(`[rss] Forced refresh of ${subs.length} Letterboxd subscription(s).`);
+    await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
+    return subs.length;
+  }
+
   /**
    * Re-checks Letterboxd feeds the poller paused itself after repeated failures.
    * A feed that parses again is resumed; one that still fails stays paused and is
