@@ -67,13 +67,14 @@ describe('RssPoller.refreshLetterboxd', () => {
     expect(parseURL).not.toHaveBeenCalled();
   });
 
-  it('polls only Letterboxd subscriptions', async () => {
+  it('polls only Letterboxd subscriptions in the given guild', async () => {
     vi.mocked(rssDb.getActiveSubscriptions).mockReturnValue([
-      makeSub({ id: 1, feed_url: 'https://letterboxd.com/a/rss/' }),
-      makeSub({ id: 2, feed_url: 'https://example.com/feed' }),
+      makeSub({ id: 1, guild_id: 'g1', feed_url: 'https://letterboxd.com/a/rss/' }),
+      makeSub({ id: 2, guild_id: 'g2', feed_url: 'https://letterboxd.com/b/rss/' }),
+      makeSub({ id: 3, guild_id: 'g1', feed_url: 'https://example.com/feed' }),
     ]);
 
-    const count = await new RssPoller(makeClient()).refreshLetterboxd();
+    const count = await new RssPoller(makeClient()).refreshLetterboxd('g1');
 
     expect(count).toBe(1);
     expect(parseURL).toHaveBeenCalledTimes(1);

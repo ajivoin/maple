@@ -28,7 +28,7 @@ const command: SlashCommand = {
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const count = await poller.refreshLetterboxd();
+    const count = await poller.refreshLetterboxd(interaction.guildId ?? undefined);
     await interaction.editReply(
       count === 0
         ? 'No active Letterboxd feeds to refresh.'

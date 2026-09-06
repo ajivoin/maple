@@ -94,9 +94,11 @@ export class RssPoller {
     await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
   }
 
-  /** Immediately polls every active Letterboxd subscription. Returns how many were polled. */
-  async refreshLetterboxd(): Promise<number> {
-    const subs = rssDb.getActiveSubscriptions().filter((sub) => isLetterboxdFeed(sub.feed_url));
+  /** Immediately polls active Letterboxd subscriptions, optionally limited to one guild. Returns how many were polled. */
+  async refreshLetterboxd(guildId?: string): Promise<number> {
+    const subs = rssDb
+      .getActiveSubscriptions()
+      .filter((sub) => isLetterboxdFeed(sub.feed_url) && (!guildId || sub.guild_id === guildId));
     if (subs.length === 0) return 0;
     logger.info(`[rss] Forced refresh of ${subs.length} Letterboxd subscription(s).`);
     await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
@@ -138,7 +140,7 @@ export class RssPoller {
       if (newItems.length > 0) {
         const channel = await this.client.channels.fetch(sub.channel_id).catch(() => null);
         if (channel?.isSendable()) {
-          const isLetterboxd = sub.feed_url.includes('letterboxd.com');
+          const isLetterboxd = isLetterboxdFeed(sub.feed_url);
           for (const item of newItems.slice().reverse()) {
             const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
             const watchedDate = isLetterboxd ? extractWatchedDate(item) : null;
@@ -164,7 +166,12 @@ export class RssPoller {
       const newCount = rssDb.incrementErrorCount(sub.id);
       if (newCount >= MAX_ERROR_COUNT) {
         rssDb.pauseWithError(sub.id);
-        await this.postWarning(sub.channel_id, sub.feed_url, sub.feed_name);
+        await this.postWarning(
+          sub.channel_id,
+          sub.feed_url,
+          sub.feed_name,
+          isLetterboxdFeed(sub.feed_url),
+        );
       }
     }
   }
@@ -195,13 +202,17 @@ export class RssPoller {
     channelId: string,
     feedUrl: string,
     feedName: string | null,
+    isLetterboxd: boolean,
   ): Promise<void> {
     const channel = await this.client.channels.fetch(channelId).catch(() => null);
     if (!channel?.isSendable()) return;
     const label = feedName ?? feedUrl;
+    const closing = isLetterboxd
+      ? 'It will be retried automatically once the feed is reachable again.'
+      : 'Re-add the subscription once the feed is working again.';
     await channel.send(
       `⚠️ The feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
-        `It will be retried automatically once the feed is reachable again.`,
+        closing,
     );
   }
 

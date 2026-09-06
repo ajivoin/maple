@@ -81,6 +81,11 @@ describe('extractWatchedDate', () => {
   it('returns null when no snippet is present', () => {
     expect(extractWatchedDate({} as Parser.Item)).toBeNull();
   });
+
+  it('returns null when the watched-on date is unparseable', () => {
+    const item = { contentSnippet: 'Watched on Someday Xyz 45, 2026.' } as Parser.Item;
+    expect(extractWatchedDate(item)).toBeNull();
+  });
 });
 
 describe('truncateAtWord', () => {
