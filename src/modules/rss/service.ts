@@ -4,7 +4,12 @@ import { logger } from '../../logger.js';
 import { config } from '../../config.js';
 import * as rssDb from './db.js';
 import type { RssSubscription } from './db.js';
-import { extractPosterUrl, extractReviewText, isLetterboxdFeed } from '../letterboxd/feeds.js';
+import {
+  extractPosterUrl,
+  extractReviewText,
+  extractWatchedDate,
+  isLetterboxdFeed,
+} from '../letterboxd/feeds.js';
 
 const DESCRIPTION_MAX_CHARS = 300;
 
@@ -19,6 +24,7 @@ export function buildItemEmbed(
   item: Parser.Item,
   includeDescription = true,
   thumbnailUrl?: string | null,
+  watchedDate?: Date | null,
 ): EmbedBuilder {
   const raw = (item.contentSnippet ?? item.summary ?? '').trim();
   const hasSpoilers = raw.includes('This review may contain spoilers.');
@@ -28,7 +34,7 @@ export function buildItemEmbed(
     .setURL(item.link ?? null)
     .setDescription(description)
     .setFooter({ text: feedTitle })
-    .setTimestamp(item.isoDate ? new Date(item.isoDate) : null)
+    .setTimestamp(watchedDate ?? (item.isoDate ? new Date(item.isoDate) : null))
     .setColor(0x5865f2);
   if (thumbnailUrl) embed.setThumbnail(thumbnailUrl);
   return embed;
@@ -36,6 +42,21 @@ export function buildItemEmbed(
 
 const parser = new Parser();
 const MAX_ERROR_COUNT = 3;
+
+let activePoller: RssPoller | null = null;
+
+/** Starts the shared RSS poller once; subsequent calls return the running instance. */
+export function startRssPoller(client: Client): RssPoller {
+  if (!activePoller) {
+    activePoller = new RssPoller(client);
+    activePoller.start();
+  }
+  return activePoller;
+}
+
+export function getRssPoller(): RssPoller | null {
+  return activePoller;
+}
 
 export class RssPoller {
   private client: Client;
@@ -73,6 +94,17 @@ export class RssPoller {
     await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
   }
 
+  /** Immediately polls active Letterboxd subscriptions, optionally limited to one guild. Returns how many were polled. */
+  async refreshLetterboxd(guildId?: string): Promise<number> {
+    const subs = rssDb
+      .getActiveSubscriptions()
+      .filter((sub) => isLetterboxdFeed(sub.feed_url) && (!guildId || sub.guild_id === guildId));
+    if (subs.length === 0) return 0;
+    logger.info(`[rss] Forced refresh of ${subs.length} Letterboxd subscription(s).`);
+    await Promise.allSettled(subs.map((sub) => this.pollOne(sub)));
+    return subs.length;
+  }
+
   /**
    * Re-checks Letterboxd feeds the poller paused itself after repeated failures.
    * A feed that parses again is resumed; one that still fails stays paused and is
@@ -108,14 +140,15 @@ export class RssPoller {
       if (newItems.length > 0) {
         const channel = await this.client.channels.fetch(sub.channel_id).catch(() => null);
         if (channel?.isSendable()) {
-          const isLetterboxd = sub.feed_url.includes('letterboxd.com');
+          const isLetterboxd = isLetterboxdFeed(sub.feed_url);
           for (const item of newItems.slice().reverse()) {
             const thumbnailUrl = isLetterboxd ? extractPosterUrl(item) : null;
+            const watchedDate = isLetterboxd ? extractWatchedDate(item) : null;
             const cleaned = isLetterboxd
               ? { ...item, contentSnippet: extractReviewText(item) ?? undefined }
               : item;
             await channel.send({
-              embeds: [buildItemEmbed(feedTitle, cleaned, true, thumbnailUrl)],
+              embeds: [buildItemEmbed(feedTitle, cleaned, true, thumbnailUrl, watchedDate)],
             });
           }
         }
@@ -133,7 +166,12 @@ export class RssPoller {
       const newCount = rssDb.incrementErrorCount(sub.id);
       if (newCount >= MAX_ERROR_COUNT) {
         rssDb.pauseWithError(sub.id);
-        await this.postWarning(sub.channel_id, sub.feed_url, sub.feed_name);
+        await this.postWarning(
+          sub.channel_id,
+          sub.feed_url,
+          sub.feed_name,
+          isLetterboxdFeed(sub.feed_url),
+        );
       }
     }
   }
@@ -164,13 +202,17 @@ export class RssPoller {
     channelId: string,
     feedUrl: string,
     feedName: string | null,
+    isLetterboxd: boolean,
   ): Promise<void> {
     const channel = await this.client.channels.fetch(channelId).catch(() => null);
     if (!channel?.isSendable()) return;
     const label = feedName ?? feedUrl;
+    const closing = isLetterboxd
+      ? 'It will be retried automatically once the feed is reachable again.'
+      : 'Re-add the subscription once the feed is working again.';
     await channel.send(
-      `⚠️ The RSS feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
-        `Fix the feed URL or use \`/rss_resume\` to re-enable it.`,
+      `⚠️ The feed **${label}** has failed ${MAX_ERROR_COUNT} times and has been paused. ` +
+        closing,
     );
   }
 

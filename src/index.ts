@@ -4,7 +4,6 @@ import { loadModules } from './core/loader.js';
 import { registerInteractions } from './core/interactionCreate.js';
 import { registerReady } from './core/ready.js';
 import { AudioModule } from './modules/audio/index.js';
-import { RssModule } from './modules/rss/index.js';
 import { LetterboxdModule } from './modules/letterboxd/index.js';
 import { GeneralModule } from './modules/general/index.js';
 import { config } from './config.js';
@@ -14,7 +13,6 @@ initDb();
 
 const { intents, registerEvents, onReady } = loadModules([
   AudioModule,
-  RssModule,
   LetterboxdModule,
   GeneralModule,
 ]);

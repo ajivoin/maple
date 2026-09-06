@@ -3,7 +3,11 @@ import type Parser from 'rss-parser';
 
 vi.mock('../config.js', () => ({ config: { RSS_POLL_INTERVAL_MS: 600000 } }));
 
-import { extractPosterUrl, extractReviewText } from '../modules/letterboxd/feeds.js';
+import {
+  extractPosterUrl,
+  extractReviewText,
+  extractWatchedDate,
+} from '../modules/letterboxd/feeds.js';
 import { buildItemEmbed, truncateAtWord } from '../modules/rss/service.js';
 
 describe('extractPosterUrl', () => {
@@ -56,6 +60,31 @@ describe('extractReviewText', () => {
 
   it('returns null when contentSnippet is absent', () => {
     expect(extractReviewText({} as Parser.Item)).toBeNull();
+  });
+});
+
+describe('extractWatchedDate', () => {
+  it('returns a Date for the watched-on line', () => {
+    const item = {
+      contentSnippet: 'A great film.\n\nWatched on Friday July 24, 2026.',
+    } as Parser.Item;
+    const d = extractWatchedDate(item);
+    expect(d).toBeInstanceOf(Date);
+    expect(d!.getFullYear() === 2026 && d!.getMonth() === 6 && d!.getDate() === 24).toBe(true);
+  });
+
+  it('returns null when no watched line is present', () => {
+    const item = { contentSnippet: 'Just a plain review.' } as Parser.Item;
+    expect(extractWatchedDate(item)).toBeNull();
+  });
+
+  it('returns null when no snippet is present', () => {
+    expect(extractWatchedDate({} as Parser.Item)).toBeNull();
+  });
+
+  it('returns null when the watched-on date is unparseable', () => {
+    const item = { contentSnippet: 'Watched on Someday Xyz 45, 2026.' } as Parser.Item;
+    expect(extractWatchedDate(item)).toBeNull();
   });
 });
 
@@ -125,5 +154,16 @@ describe('buildItemEmbed', () => {
       contentSnippet: 'I hate spoiler culture but loved this film.',
     });
     expect(embed.toJSON().description).toBe('I hate spoiler culture but loved this film.');
+  });
+
+  it('uses the watchedDate for the timestamp when one is passed', () => {
+    const watchedDate = new Date('July 24, 2026');
+    const embed = buildItemEmbed('Dave (Letterboxd)', item, false, null, watchedDate);
+    expect(embed.toJSON().timestamp).toBe(watchedDate.toISOString());
+  });
+
+  it('falls back to item.isoDate for the timestamp when watchedDate is omitted', () => {
+    const embed = buildItemEmbed('Dave (Letterboxd)', item, false);
+    expect(embed.toJSON().timestamp).toBe('2026-06-01T00:00:00.000Z');
   });
 });

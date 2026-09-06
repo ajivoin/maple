@@ -38,11 +38,13 @@ src/
       ytdlp.ts          # resolveUrl(), resolveSearch(), createAudioStream()
       events/
         voiceStateUpdate.ts
-    rss/
-      index.ts          # RssModule definition; starts RssPoller in onReady
-      commands/         # rss_add, rss_list, rss_remove, rss_pause, rss_resume
+    rss/                # Internal Letterboxd plumbing — no slash commands of its own
       db.ts             # RSS CRUD operations (better-sqlite3, synchronous)
-      service.ts        # RssPoller: polls feeds, posts new items as embeds
+      service.ts        # RssPoller + startRssPoller()/getRssPoller() singleton
+    letterboxd/
+      index.ts          # LetterboxdModule definition; starts RssPoller in onReady
+      feeds.ts          # buildFeedUrl(), isLetterboxdFeed(), poster/review extraction
+      commands/         # letterboxd_add, letterboxd_list, letterboxd_remove, letterboxd_refresh
     general/
       index.ts          # GeneralModule definition
       commands/
@@ -113,11 +115,18 @@ export default command;
 
 ## RSS Layer
 
+The `rss` module has no slash commands — it is internal plumbing for the Letterboxd module.
+
 - `src/modules/rss/db.ts` — CRUD for `rss_subscriptions` table (better-sqlite3, synchronous)
-- `src/modules/rss/service.ts` — `RssPoller` class; started in `RssModule.onReady`; polls every `RSS_POLL_INTERVAL_MS` ms; posts new items as Discord embeds; auto-pauses feeds that fail 3 times
-- Auto-paused feeds are flagged with `auto_paused = 1`; every `RSS_RETRY_INTERVAL_MS` ms the poller re-checks the auto-paused **Letterboxd** feeds and resumes any that parse again (manual `/rss_pause` clears the flag, so it is never auto-resumed)
-- RSS commands gate write operations behind `PermissionFlagsBits.ManageChannels`
-- `/rss_remove`, `/rss_pause`, `/rss_resume` use Discord autocomplete on the `url` option
+- `src/modules/rss/service.ts` — `RssPoller` class; started via `startRssPoller(client)` from `LetterboxdModule.onReady`; `getRssPoller()` returns the running instance. Polls every `RSS_POLL_INTERVAL_MS` ms; posts new items as Discord embeds; auto-pauses feeds that fail 3 times
+- Auto-paused feeds are flagged with `auto_paused = 1`; every `RSS_RETRY_INTERVAL_MS` ms the poller re-checks the auto-paused **Letterboxd** feeds and resumes any that parse again
+
+## Letterboxd Layer
+
+- `src/modules/letterboxd/` — front-end for tracking Letterboxd users' activity feeds; reuses the RSS backend (`rss/db.ts` for storage, `rss/service.ts` for polling)
+- `feeds.ts` — `buildFeedUrl(username)`, `isLetterboxdFeed(url)`, `usernameFromFeedUrl(url)`, plus poster/review-text extraction from feed items
+- Commands: `/letterboxd_add`, `/letterboxd_list`, `/letterboxd_remove` (`_remove` uses Discord autocomplete on its option), `/letterboxd_refresh`
+- `/letterboxd_refresh` forces an immediate poll of this server's active Letterboxd feeds via `RssPoller.refreshLetterboxd(guildId)`; it is the only Letterboxd command that is permission-gated (behind `PermissionFlagsBits.ManageChannels`, enforced by `requireManageChannels` before `deferReply`). `/letterboxd_add`, `/letterboxd_list`, and `/letterboxd_remove` are not permission-gated.
 
 ## Response Conventions
 
